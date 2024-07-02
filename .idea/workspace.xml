@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="25043644-4411-4e1b-9269-2b584d342d14" name="Changes" comment="feat(zoom):">
+    <list default="true" id="25043644-4411-4e1b-9269-2b584d342d14" name="Changes" comment="feat(autocut):">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
     </list>
@@ -100,12 +100,21 @@
       <option name="project" value="LOCAL" />
       <updated>1719909701802</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="feat(autocut):">
+      <option name="closed" value="true" />
+      <created>1719911364577</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1719911364577</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="feat(init)" />
     <MESSAGE value="feat(zoom):" />
-    <option name="LAST_COMMIT_MESSAGE" value="feat(zoom):" />
+    <MESSAGE value="feat(autocut):" />
+    <option name="LAST_COMMIT_MESSAGE" value="feat(autocut):" />
   </component>
 </project>

@@ -5,6 +5,8 @@ from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, Q
 from PySide6.QtGui import QPainter, QPen, QColor, QTransform
 from PySide6.QtCore import Qt, QPoint
 
+TOLERANCE = 2
+
 
 class Line:
     def __init__(self, start_point, end_point, color, width):
@@ -38,17 +40,27 @@ class Line:
             if denom == 0:
                 return None
             intersect_x = ((A.x() * B.y() - A.y() * B.x()) * (C.x() - D.x()) - (A.x() - B.x()) * (
-                        C.x() * D.y() - C.y() * D.x())) / denom
+                    C.x() * D.y() - C.y() * D.x())) / denom
             intersect_y = ((A.x() * B.y() - A.y() * B.x()) * (C.y() - D.y()) - (A.y() - B.y()) * (
-                        C.x() * D.y() - C.y() * D.x())) / denom
+                    C.x() * D.y() - C.y() * D.x())) / denom
             return QPoint(intersect_x, intersect_y)
         return None
+
+    def _points_equal(self, p1, p2):
+        return abs(p1.x() - p2.x()) <= TOLERANCE and abs(p1.y() - p2.y()) <= TOLERANCE
+
+    def is_short(self, threshold=1.0):
+        length = math.hypot(self.start_point.x() - self.end_point.x(), self.start_point.y() - self.end_point.y())
+        return length < threshold
+
 
     def __eq__(self, other):
         if not isinstance(other, Line):
             return False
-        return (self.start_point == other.start_point and self.end_point == other.end_point) or \
-            (self.start_point == other.end_point and self.end_point == other.start_point)
+        return (self._points_equal(self.start_point, other.start_point) and self._points_equal(self.end_point,
+                                                                                               other.end_point)) or \
+            (self._points_equal(self.start_point, other.end_point) and self._points_equal(self.end_point,
+                                                                                          other.start_point))
 
     def __hash__(self):
         start_tuple = (self.start_point.x(), self.start_point.y())
@@ -117,6 +129,9 @@ class Canvas(QWidget):
             self.current_line.end_point = end_point
             self.update()
 
+    def remove_short_lines(self):
+        self.lines = [line for line in self.lines if not line.is_short()]
+
     def mouseReleaseEvent(self, event):
         scene_pos = self.map_to_scene(event.pos())
         if self.operation_mode == "Draw" and self.current_line:
@@ -124,37 +139,52 @@ class Canvas(QWidget):
             if event.modifiers() & Qt.ControlModifier:
                 end_point = self.snap_to_angle(self.current_line.start_point, end_point)
             self.current_line.end_point = end_point
-            self.handle_intersections(self.current_line)
             self.lines.append(self.current_line)
             self.current_line = None
+            self.rescan_intersections()
             self.cleanup_duplicates()
+            self.remove_short_lines()  # Added call to remove short lines
             self.update()
 
-    def handle_intersections(self, new_line):
-        new_lines = [new_line]
-        to_add = []
-        to_remove = []
-        for existing_line in self.lines:
-            intersections = []
-            for line in new_lines:
-                intersect_point = line.intersect(existing_line)
-                if intersect_point:
-                    intersections.append((line, intersect_point))
-            if intersections:
-                to_remove.append(existing_line)
-                for line, point in intersections:
-                    to_remove.append(line)
-                    to_add.extend(self.split_line(line, point))
-                    to_add.extend(self.split_line(existing_line, point))
-        for line in to_remove:
-            if line in self.lines:
-                self.lines.remove(line)
-        self.lines.extend(to_add)
+    def rescan_intersections(self):
+        intersection_table = []
+        for i, line1 in enumerate(self.lines):
+            for j, line2 in enumerate(self.lines):
+                if i < j:  # Avoid duplicate checks and self-intersections
+                    intersect_point = line1.intersect(line2)
+                    if intersect_point:
+                        intersection_table.append((i, intersect_point))
+                        intersection_table.append((j, intersect_point))
 
-    def split_line(self, line, point):
-        new_line1 = Line(line.start_point, point, line.color, line.width)
-        new_line2 = Line(point, line.end_point, line.color, line.width)
-        return [new_line1, new_line2]
+        intersection_groups = {}
+        for line_idx, intersect_point in intersection_table:
+            if line_idx not in intersection_groups:
+                intersection_groups[line_idx] = []
+            intersection_groups[line_idx].append(intersect_point)
+
+        new_lines = []
+        for line_idx, intersect_points in intersection_groups.items():
+            line = self.lines[line_idx]
+            sorted_points = self.sort_points_on_line(line, intersect_points)
+            new_lines.extend(self.split_line_by_points(line, sorted_points))
+
+        self.lines = [line for idx, line in enumerate(self.lines) if idx not in intersection_groups]
+        self.lines.extend(new_lines)
+
+    def sort_points_on_line(self, line, points):
+        def distance_to_start(p):
+            return math.hypot(p.x() - line.start_point.x(), p.y() - line.start_point.y())
+
+        return sorted(points, key=distance_to_start)
+
+    def split_line_by_points(self, line, points):
+        segments = []
+        start = line.start_point
+        for point in points:
+            segments.append(Line(start, point, line.color, line.width))
+            start = point
+        segments.append(Line(start, line.end_point, line.color, line.width))
+        return segments
 
     def cleanup_duplicates(self):
         unique_lines = set(self.lines)
