@@ -1,7 +1,10 @@
 import sys
 import math
-from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QColorDialog, \
-    QSpinBox, QLabel, QComboBox
+from PySide6.QtWidgets import (
+    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
+    QColorDialog, QSpinBox, QLabel, QComboBox, QListWidget, QListWidgetItem,
+    QLineEdit, QCheckBox, QColorDialog, QHBoxLayout, QVBoxLayout, QDialog
+)
 from PySide6.QtGui import QPainter, QPen, QColor, QTransform
 from PySide6.QtCore import Qt, QPoint
 
@@ -40,9 +43,9 @@ class Line:
             if denom == 0:
                 return None
             intersect_x = ((A.x() * B.y() - A.y() * B.x()) * (C.x() - D.x()) - (A.x() - B.x()) * (
-                    C.x() * D.y() - C.y() * D.x())) / denom
+                        C.x() * D.y() - C.y() * D.x())) / denom
             intersect_y = ((A.x() * B.y() - A.y() * B.x()) * (C.y() - D.y()) - (A.y() - B.y()) * (
-                    C.x() * D.y() - C.y() * D.x())) / denom
+                        C.x() * D.y() - C.y() * D.x())) / denom
             return QPoint(intersect_x, intersect_y)
         return None
 
@@ -52,7 +55,6 @@ class Line:
     def is_short(self, threshold=1.0):
         length = math.hypot(self.start_point.x() - self.end_point.x(), self.start_point.y() - self.end_point.y())
         return length < threshold
-
 
     def __eq__(self, other):
         if not isinstance(other, Line):
@@ -68,89 +70,28 @@ class Line:
         return hash((min(start_tuple, end_tuple), max(start_tuple, end_tuple)))
 
 
-class Canvas(QWidget):
-    def __init__(self):
-        super().__init__()
+class Layer:
+    def __init__(self, name="Layer", color=QColor(Qt.black), width=2, visible=True):
+        self.name = name
+        self.color = color
+        self.width = width
+        self.visible = visible
         self.lines = []
-        self.current_line = None
-        self.current_color = QColor(Qt.black)
-        self.current_width = 2
-        self.operation_mode = "Draw"
-        self.setMouseTracking(True)
-        self.zoom_factor = 1.0
-        self.offset = QPoint(0, 0)
 
-    def set_color(self, color):
-        self.current_color = color
+    def add_line(self, line):
+        self.lines.append(line)
+        self.cleanup()
 
-    def set_width(self, width):
-        self.current_width = width
-
-    def set_mode(self, mode):
-        self.operation_mode = mode
-
-    def wheelEvent(self, event):
-        mouse_pos = event.position().toPoint()
-        delta = event.angleDelta().y()
-        if delta > 0:
-            factor = 1.1
-        else:
-            factor = 0.9
-
-        old_zoom_factor = self.zoom_factor
-        self.zoom_factor *= factor
-        self.offset = self.offset - mouse_pos + (mouse_pos / old_zoom_factor) * self.zoom_factor
-
-        self.update()
-
-    def map_to_scene(self, point):
-        return (point - self.offset) / self.zoom_factor
-
-    def map_to_view(self, point):
-        return point * self.zoom_factor + self.offset
-
-    def mousePressEvent(self, event):
-        scene_pos = self.map_to_scene(event.pos())
-        if self.operation_mode == "Draw":
-            self.current_line = Line(scene_pos, scene_pos, self.current_color, self.current_width)
-        elif self.operation_mode == "Delete":
-            for line in self.lines:
-                if line.contains_point(scene_pos):
-                    self.lines.remove(line)
-                    self.update()
-                    break
-
-    def mouseMoveEvent(self, event):
-        scene_pos = self.map_to_scene(event.pos())
-        if self.operation_mode == "Draw" and self.current_line:
-            end_point = scene_pos
-            if event.modifiers() & Qt.ControlModifier:
-                end_point = self.snap_to_angle(self.current_line.start_point, end_point)
-            self.current_line.end_point = end_point
-            self.update()
-
-    def remove_short_lines(self):
-        self.lines = [line for line in self.lines if not line.is_short()]
-
-    def mouseReleaseEvent(self, event):
-        scene_pos = self.map_to_scene(event.pos())
-        if self.operation_mode == "Draw" and self.current_line:
-            end_point = scene_pos
-            if event.modifiers() & Qt.ControlModifier:
-                end_point = self.snap_to_angle(self.current_line.start_point, end_point)
-            self.current_line.end_point = end_point
-            self.lines.append(self.current_line)
-            self.current_line = None
-            self.rescan_intersections()
-            self.cleanup_duplicates()
-            self.remove_short_lines()  # Added call to remove short lines
-            self.update()
+    def cleanup(self):
+        self.rescan_intersections()
+        self.remove_short_lines()
+        self.cleanup_duplicates()
 
     def rescan_intersections(self):
         intersection_table = []
         for i, line1 in enumerate(self.lines):
             for j, line2 in enumerate(self.lines):
-                if i < j:  # Avoid duplicate checks and self-intersections
+                if i < j:
                     intersect_point = line1.intersect(line2)
                     if intersect_point:
                         intersection_table.append((i, intersect_point))
@@ -190,6 +131,90 @@ class Canvas(QWidget):
         unique_lines = set(self.lines)
         self.lines = list(unique_lines)
 
+    def remove_short_lines(self):
+        self.lines = [line for line in self.lines if not line.is_short()]
+
+
+class Canvas(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.layers = [Layer(name="Layer-0")]
+        self.current_layer_index = 0
+        self.current_line = None
+        self.zoom_factor = 1.0
+        self.offset = QPoint(0, 0)
+
+    def set_current_layer(self, index):
+        self.current_layer_index = index
+
+    def add_layer(self, layer):
+        self.layers.append(layer)
+
+    def remove_layer(self, index):
+        if len(self.layers) > 1:
+            del self.layers[index]
+            if self.current_layer_index >= len(self.layers):
+                self.current_layer_index = len(self.layers) - 1
+
+    def wheelEvent(self, event):
+        mouse_pos = event.position().toPoint()
+        delta = event.angleDelta().y()
+        if delta > 0:
+            factor = 1.1
+        else:
+            factor = 0.9
+
+        old_zoom_factor = self.zoom_factor
+        self.zoom_factor *= factor
+        self.offset = self.offset - mouse_pos + (mouse_pos / old_zoom_factor) * self.zoom_factor
+
+        self.update()
+
+    def map_to_scene(self, point):
+        return (point - self.offset) / self.zoom_factor
+
+    def map_to_view(self, point):
+        return point * self.zoom_factor + self.offset
+
+    def mousePressEvent(self, event):
+        scene_pos = self.map_to_scene(event.pos())
+        if event.button() == Qt.LeftButton:
+            layer = self.layers[self.current_layer_index]
+            self.current_line = Line(scene_pos, scene_pos, layer.color, layer.width)
+        elif event.button() == Qt.RightButton:
+            for layer in self.layers:
+                if not layer.visible:
+                    continue
+                for line in layer.lines:
+                    if line.contains_point(scene_pos):
+                        layer.lines.remove(line)
+                        self.update()
+                        return
+
+    def mouseMoveEvent(self, event):
+        scene_pos = self.map_to_scene(event.pos())
+        if self.current_line:
+            end_point = scene_pos
+            if event.modifiers() & Qt.ControlModifier:
+                end_point = self.snap_to_angle(self.current_line.start_point, end_point)
+            self.current_line.end_point = end_point
+            # Update line color and width to match the current layer
+            layer = self.layers[self.current_layer_index]
+            self.current_line.color = layer.color
+            self.current_line.width = layer.width
+            self.update()
+
+    def mouseReleaseEvent(self, event):
+        scene_pos = self.map_to_scene(event.pos())
+        if self.current_line:
+            end_point = scene_pos
+            if event.modifiers() & Qt.ControlModifier:
+                end_point = self.snap_to_angle(self.current_line.start_point, end_point)
+            self.current_line.end_point = end_point
+            self.layers[self.current_layer_index].add_line(self.current_line)
+            self.current_line = None
+            self.update()
+
     def paintEvent(self, event):
         painter = QPainter(self)
         transform = QTransform()
@@ -197,12 +222,15 @@ class Canvas(QWidget):
         transform.scale(self.zoom_factor, self.zoom_factor)
         painter.setTransform(transform)
 
-        for line in self.lines:
-            pen = QPen(line.color, line.width / self.zoom_factor, Qt.SolidLine)
-            painter.setPen(pen)
-            painter.drawLine(line.start_point, line.end_point)
-            self.draw_cross(painter, line.start_point)
-            self.draw_cross(painter, line.end_point)
+        for layer in self.layers:
+            if not layer.visible:
+                continue
+            for line in layer.lines:
+                pen = QPen(layer.color, layer.width / self.zoom_factor, Qt.SolidLine)
+                painter.setPen(pen)
+                painter.drawLine(line.start_point, line.end_point)
+                self.draw_cross(painter, line.start_point)
+                self.draw_cross(painter, line.end_point)
         if self.current_line:
             pen = QPen(self.current_line.color, self.current_line.width / self.zoom_factor, Qt.SolidLine)
             painter.setPen(pen)
@@ -230,50 +258,120 @@ class Canvas(QWidget):
         return snapped_end_point
 
 
+class LayerItem(QWidget):
+    def __init__(self, layer, parent=None):
+        super().__init__(parent)
+        self.layer = layer
+
+        layout = QHBoxLayout()
+
+        self.name_input = QLineEdit(self.layer.name)
+        self.name_input.textChanged.connect(self.on_name_changed)
+        layout.addWidget(self.name_input)
+
+        self.width_input = QSpinBox()
+        self.width_input.setValue(self.layer.width)
+        self.width_input.valueChanged.connect(self.on_width_changed)
+        layout.addWidget(self.width_input)
+
+        self.color_button = QPushButton()
+        self.color_button.setStyleSheet(f"background-color: {self.layer.color.name()}")
+        self.color_button.clicked.connect(self.select_color)
+        layout.addWidget(self.color_button)
+
+        self.visibility_checkbox = QCheckBox()
+        self.visibility_checkbox.setChecked(self.layer.visible)
+        self.visibility_checkbox.stateChanged.connect(self.on_visibility_changed)
+        layout.addWidget(self.visibility_checkbox)
+
+        self.remove_button = QPushButton("Remove")
+        self.remove_button.clicked.connect(self.on_remove_clicked)
+        layout.addWidget(self.remove_button)
+
+        self.setLayout(layout)
+
+    def on_name_changed(self, text):
+        self.layer.name = text
+
+    def on_width_changed(self, value):
+        self.layer.width = value
+
+    def select_color(self):
+        color = QColorDialog.getColor(self.layer.color, self)
+        if color.isValid():
+            self.layer.color = color
+            self.color_button.setStyleSheet(f"background-color: {self.layer.color.name()}")
+
+    def on_visibility_changed(self, state):
+        self.layer.visible = bool(state)
+
+    def on_remove_clicked(self):
+        self.parent().parent().remove_layer(self.layer)
+
+
+class LayerManager(QDialog):
+    def __init__(self, canvas, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Layer Manager")
+        self.canvas = canvas
+
+        layout = QVBoxLayout()
+
+        self.layer_list = QListWidget()
+        layout.addWidget(self.layer_list)
+
+        self.add_layer_button = QPushButton("Add Layer")
+        self.add_layer_button.clicked.connect(self.add_layer)
+        layout.addWidget(self.add_layer_button)
+
+        self.setLayout(layout)
+        self.update_layer_list()
+
+    def update_layer_list(self):
+        self.layer_list.clear()
+        for i, layer in enumerate(self.canvas.layers):
+            item = QListWidgetItem()
+            widget = LayerItem(layer, self)
+            if i == self.canvas.current_layer_index:
+                widget.setStyleSheet("background-color: lightblue;")
+            item.setSizeHint(widget.sizeHint())
+            self.layer_list.addItem(item)
+            self.layer_list.setItemWidget(item, widget)
+
+    def add_layer(self):
+        new_layer_name = f"Layer-{len(self.canvas.layers)}"
+        new_layer = Layer(name=new_layer_name)
+        self.canvas.add_layer(new_layer)
+        self.update_layer_list()
+
+    def remove_layer(self, layer):
+        index = self.canvas.layers.index(layer)
+        self.canvas.remove_layer(index)
+        self.update_layer_list()
+
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("PySide6 Drawing Application")
+        self.setGeometry(100, 100, 800, 600)  # Initial window size
         self.canvas = Canvas()
+        self.layer_manager = LayerManager(self.canvas)
+        self.layer_manager.show()  # Show the layer manager as a non-blocking modal
         self.init_ui()
 
     def init_ui(self):
         main_layout = QVBoxLayout()
-        control_layout = QHBoxLayout()
 
-        color_button = QPushButton("Select Color")
-        color_button.clicked.connect(self.select_color)
-        control_layout.addWidget(color_button)
-
-        self.width_spinbox = QSpinBox()
-        self.width_spinbox.setValue(2)
-        self.width_spinbox.valueChanged.connect(self.change_width)
-        control_layout.addWidget(QLabel("Line Width:"))
-        control_layout.addWidget(self.width_spinbox)
-
-        self.mode_combobox = QComboBox()
-        self.mode_combobox.addItems(["Draw", "Select", "Delete"])
-        self.mode_combobox.currentTextChanged.connect(self.change_mode)
-        control_layout.addWidget(QLabel("Mode:"))
-        control_layout.addWidget(self.mode_combobox)
-
-        main_layout.addLayout(control_layout)
         main_layout.addWidget(self.canvas)
 
         container = QWidget()
         container.setLayout(main_layout)
         self.setCentralWidget(container)
 
-    def select_color(self):
-        color = QColorDialog.getColor()
-        if color.isValid():
-            self.canvas.set_color(color)
-
-    def change_width(self, width):
-        self.canvas.set_width(width)
-
-    def change_mode(self, mode):
-        self.canvas.set_mode(mode)
+        self.layer_manager.update_layer_list()
+        self.layer_manager.layer_list.setCurrentRow(0)
+        self.canvas.set_current_layer(0)
 
 
 if __name__ == '__main__':
