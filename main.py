@@ -1,0 +1,150 @@
+import sys
+import math
+from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QColorDialog, \
+    QSpinBox, QLabel, QComboBox
+from PySide6.QtGui import QPainter, QPen, QColor
+from PySide6.QtCore import Qt, QPoint
+
+
+class Line:
+    def __init__(self, start_point, end_point, color, width):
+        self.start_point = start_point
+        self.end_point = end_point
+        self.color = color
+        self.width = width
+
+    def contains_point(self, point):
+        # Simple line hit test
+        margin = 5
+        x1, y1 = self.start_point.x(), self.start_point.y()
+        x2, y2 = self.end_point.x(), self.end_point.y()
+        xp, yp = point.x(), point.y()
+
+        if min(x1, x2) - margin <= xp <= max(x1, x2) + margin and min(y1, y2) - margin <= yp <= max(y1, y2) + margin:
+            distance = abs((y2 - y1) * xp - (x2 - x1) * yp + x2 * y1 - y2 * x1) / math.hypot(y2 - y1, x2 - x1)
+            return distance <= margin
+        return False
+
+
+class Canvas(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.lines = []
+        self.current_line = None
+        self.current_color = QColor(Qt.black)
+        self.current_width = 2
+        self.operation_mode = "Draw"
+        self.setMouseTracking(True)
+
+    def set_color(self, color):
+        self.current_color = color
+
+    def set_width(self, width):
+        self.current_width = width
+
+    def set_mode(self, mode):
+        self.operation_mode = mode
+
+    def mousePressEvent(self, event):
+        if self.operation_mode == "Draw":
+            self.current_line = Line(event.pos(), event.pos(), self.current_color, self.current_width)
+        elif self.operation_mode == "Delete":
+            for line in self.lines:
+                if line.contains_point(event.pos()):
+                    self.lines.remove(line)
+                    self.update()
+                    break
+
+    def mouseMoveEvent(self, event):
+        if self.operation_mode == "Draw" and self.current_line:
+            end_point = event.pos()
+            if event.modifiers() & Qt.ControlModifier:
+                end_point = self.snap_to_angle(self.current_line.start_point, end_point)
+            self.current_line.end_point = end_point
+            self.update()
+
+    def mouseReleaseEvent(self, event):
+        if self.operation_mode == "Draw" and self.current_line:
+            end_point = event.pos()
+            if event.modifiers() & Qt.ControlModifier:
+                end_point = self.snap_to_angle(self.current_line.start_point, end_point)
+            self.current_line.end_point = end_point
+            self.lines.append(self.current_line)
+            self.current_line = None
+            self.update()
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        for line in self.lines:
+            pen = QPen(line.color, line.width, Qt.SolidLine)
+            painter.setPen(pen)
+            painter.drawLine(line.start_point, line.end_point)
+        if self.current_line:
+            pen = QPen(self.current_line.color, self.current_line.width, Qt.SolidLine)
+            painter.setPen(pen)
+            painter.drawLine(self.current_line.start_point, self.current_line.end_point)
+
+    def snap_to_angle(self, start_point, end_point):
+        dx = end_point.x() - start_point.x()
+        dy = end_point.y() - start_point.y()
+        angle = math.atan2(dy, dx)
+        snap_angle = round(angle / (math.pi / 12)) * (math.pi / 12)
+        length = math.hypot(dx, dy)
+        snapped_end_point = QPoint(
+            start_point.x() + length * math.cos(snap_angle),
+            start_point.y() + length * math.sin(snap_angle)
+        )
+        return snapped_end_point
+
+
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("PySide6 Drawing Application")
+        self.canvas = Canvas()
+        self.init_ui()
+
+    def init_ui(self):
+        main_layout = QVBoxLayout()
+        control_layout = QHBoxLayout()
+
+        color_button = QPushButton("Select Color")
+        color_button.clicked.connect(self.select_color)
+        control_layout.addWidget(color_button)
+
+        self.width_spinbox = QSpinBox()
+        self.width_spinbox.setValue(2)
+        self.width_spinbox.valueChanged.connect(self.change_width)
+        control_layout.addWidget(QLabel("Line Width:"))
+        control_layout.addWidget(self.width_spinbox)
+
+        self.mode_combobox = QComboBox()
+        self.mode_combobox.addItems(["Draw", "Select", "Delete"])
+        self.mode_combobox.currentTextChanged.connect(self.change_mode)
+        control_layout.addWidget(QLabel("Mode:"))
+        control_layout.addWidget(self.mode_combobox)
+
+        main_layout.addLayout(control_layout)
+        main_layout.addWidget(self.canvas)
+
+        container = QWidget()
+        container.setLayout(main_layout)
+        self.setCentralWidget(container)
+
+    def select_color(self):
+        color = QColorDialog.getColor()
+        if color.isValid():
+            self.canvas.set_color(color)
+
+    def change_width(self, width):
+        self.canvas.set_width(width)
+
+    def change_mode(self, mode):
+        self.canvas.set_mode(mode)
+
+
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    window = MainWindow()
+    window.show()
+    sys.exit(app.exec())
