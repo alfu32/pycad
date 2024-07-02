@@ -14,7 +14,6 @@ class Line:
         self.width = width
 
     def contains_point(self, point):
-        # Simple line hit test
         margin = 5
         x1, y1 = self.start_point.x(), self.start_point.y()
         x2, y2 = self.end_point.x(), self.end_point.y()
@@ -24,6 +23,37 @@ class Line:
             distance = abs((y2 - y1) * xp - (x2 - x1) * yp + x2 * y1 - y2 * x1) / math.hypot(y2 - y1, x2 - x1)
             return distance <= margin
         return False
+
+    def intersect(self, other):
+        def ccw(A, B, C):
+            return (C.y() - A.y()) * (B.x() - A.x()) > (B.y() - A.y()) * (C.x() - A.x())
+
+        A = self.start_point
+        B = self.end_point
+        C = other.start_point
+        D = other.end_point
+
+        if ccw(A, C, D) != ccw(B, C, D) and ccw(A, B, C) != ccw(A, B, D):
+            denom = (A.x() - B.x()) * (C.y() - D.y()) - (A.y() - B.y()) * (C.x() - D.x())
+            if denom == 0:
+                return None
+            intersect_x = ((A.x() * B.y() - A.y() * B.x()) * (C.x() - D.x()) - (A.x() - B.x()) * (
+                        C.x() * D.y() - C.y() * D.x())) / denom
+            intersect_y = ((A.x() * B.y() - A.y() * B.x()) * (C.y() - D.y()) - (A.y() - B.y()) * (
+                        C.x() * D.y() - C.y() * D.x())) / denom
+            return QPoint(intersect_x, intersect_y)
+        return None
+
+    def __eq__(self, other):
+        if not isinstance(other, Line):
+            return False
+        return (self.start_point == other.start_point and self.end_point == other.end_point) or \
+            (self.start_point == other.end_point and self.end_point == other.start_point)
+
+    def __hash__(self):
+        start_tuple = (self.start_point.x(), self.start_point.y())
+        end_tuple = (self.end_point.x(), self.end_point.y())
+        return hash((min(start_tuple, end_tuple), max(start_tuple, end_tuple)))
 
 
 class Canvas(QWidget):
@@ -48,9 +78,7 @@ class Canvas(QWidget):
         self.operation_mode = mode
 
     def wheelEvent(self, event):
-        # Get the position of the mouse pointer
         mouse_pos = event.position().toPoint()
-        # Calculate the zoom factor
         delta = event.angleDelta().y()
         if delta > 0:
             factor = 1.1
@@ -59,18 +87,14 @@ class Canvas(QWidget):
 
         old_zoom_factor = self.zoom_factor
         self.zoom_factor *= factor
-
-        # Adjust the offset to keep the zoom centered on the mouse pointer
         self.offset = self.offset - mouse_pos + (mouse_pos / old_zoom_factor) * self.zoom_factor
 
         self.update()
 
     def map_to_scene(self, point):
-        """Map a point from the widget coordinates to the scene coordinates."""
         return (point - self.offset) / self.zoom_factor
 
     def map_to_view(self, point):
-        """Map a point from the scene coordinates to the widget coordinates."""
         return point * self.zoom_factor + self.offset
 
     def mousePressEvent(self, event):
@@ -100,9 +124,41 @@ class Canvas(QWidget):
             if event.modifiers() & Qt.ControlModifier:
                 end_point = self.snap_to_angle(self.current_line.start_point, end_point)
             self.current_line.end_point = end_point
+            self.handle_intersections(self.current_line)
             self.lines.append(self.current_line)
             self.current_line = None
+            self.cleanup_duplicates()
             self.update()
+
+    def handle_intersections(self, new_line):
+        new_lines = [new_line]
+        to_add = []
+        to_remove = []
+        for existing_line in self.lines:
+            intersections = []
+            for line in new_lines:
+                intersect_point = line.intersect(existing_line)
+                if intersect_point:
+                    intersections.append((line, intersect_point))
+            if intersections:
+                to_remove.append(existing_line)
+                for line, point in intersections:
+                    to_remove.append(line)
+                    to_add.extend(self.split_line(line, point))
+                    to_add.extend(self.split_line(existing_line, point))
+        for line in to_remove:
+            if line in self.lines:
+                self.lines.remove(line)
+        self.lines.extend(to_add)
+
+    def split_line(self, line, point):
+        new_line1 = Line(line.start_point, point, line.color, line.width)
+        new_line2 = Line(point, line.end_point, line.color, line.width)
+        return [new_line1, new_line2]
+
+    def cleanup_duplicates(self):
+        unique_lines = set(self.lines)
+        self.lines = list(unique_lines)
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -115,10 +171,21 @@ class Canvas(QWidget):
             pen = QPen(line.color, line.width / self.zoom_factor, Qt.SolidLine)
             painter.setPen(pen)
             painter.drawLine(line.start_point, line.end_point)
+            self.draw_cross(painter, line.start_point)
+            self.draw_cross(painter, line.end_point)
         if self.current_line:
             pen = QPen(self.current_line.color, self.current_line.width / self.zoom_factor, Qt.SolidLine)
             painter.setPen(pen)
             painter.drawLine(self.current_line.start_point, self.current_line.end_point)
+            self.draw_cross(painter, self.current_line.start_point)
+            self.draw_cross(painter, self.current_line.end_point)
+
+    def draw_cross(self, painter, point):
+        pen = QPen(QColor(Qt.red), 2, Qt.SolidLine)
+        painter.setPen(pen)
+        size = 5
+        painter.drawLine(point.x() - size, point.y() - size, point.x() + size, point.y() + size)
+        painter.drawLine(point.x() + size, point.y() - size, point.x() - size, point.y() + size)
 
     def snap_to_angle(self, start_point, end_point):
         dx = end_point.x() - start_point.x()
