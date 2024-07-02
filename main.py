@@ -3,14 +3,19 @@ import math
 import time
 import ezdxf
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
-    QColorDialog, QSpinBox, QLabel, QComboBox, QListWidget, QListWidgetItem,
-    QLineEdit, QCheckBox, QHBoxLayout, QVBoxLayout, QDialog, QRadioButton, QButtonGroup
+    QApplication, QMainWindow, QWidget, QPushButton,
+    QColorDialog, QSpinBox, QListWidget, QListWidgetItem,
+    QLineEdit, QCheckBox, QHBoxLayout, QVBoxLayout, QDialog, QRadioButton, QStyle,
 )
 from PySide6.QtGui import QPainter, QPen, QColor, QTransform
 from PySide6.QtCore import Qt, QPoint
 
 TOLERANCE = 2
+
+lwindex = [0, 5, 9, 13, 15, 18, 20, 25,
+           30, 35, 40, 50, 53, 60, 70, 80,
+           90, 100, 106, 120, 140, 158, 200,
+           ]
 
 
 class Line:
@@ -182,22 +187,30 @@ class Canvas(QWidget):
 
         self.current_layer_index = 0
 
+    def qcolor_to_dxf_color(self, color):
+        r = color.red()
+        g = color.green()
+        b = color.blue()
+        return (r << 16) + (g << 8) + b
+
     def save_dxf(self):
         if not self.dxf_file:
             timestamp = time.strftime("%Y%m%d-%H%M%S")
             self.dxf_file = f"drawing_{timestamp}.dxf"
 
         doc = ezdxf.new()
-        for layer in self.layers:
-            doc.layers.add(name=layer.name, color=layer.color.rgb() & 0xFFFFFF, lineweight=layer.width)
+        for index, layer in enumerate(self.layers):
+            doc.layers.add(
+                name=layer.name,
+                true_color=self.qcolor_to_dxf_color(layer.color),
+                lineweight=lwindex[layer.width]
+            )
             for line in layer.lines:
                 doc.modelspace().add_line(
                     (line.start_point.x(), line.start_point.y()),
                     (line.end_point.x(), line.end_point.y()),
                     dxfattribs={
-                        'layer': layer.name,
-                        'color': line.color.rgb() & 0xFFFFFF,
-                        'lineweight': line.width
+                        'layer': layer.name
                     }
                 )
 
@@ -290,7 +303,7 @@ class Canvas(QWidget):
     def draw_cross(self, painter, point):
         pen = QPen(QColor(Qt.red), 2, Qt.SolidLine)
         painter.setPen(pen)
-        size = 5
+        size = 2
         painter.drawLine(point.x() - size, point.y() - size, point.x() + size, point.y() + size)
         painter.drawLine(point.x() + size, point.y() - size, point.x() - size, point.y() + size)
 
@@ -417,6 +430,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("PySide6 Drawing Application")
         self.setGeometry(100, 100, 800, 600)  # Initial window size
         self.canvas = Canvas()
+        self.canvas.setStyleSheet("background-color: #000000;")
         if file_path:
             self.canvas.load_dxf(file_path)
             self.canvas.dxf_file = file_path
