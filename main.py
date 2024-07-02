@@ -3,13 +3,12 @@ import math
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
     QColorDialog, QSpinBox, QLabel, QComboBox, QListWidget, QListWidgetItem,
-    QLineEdit, QCheckBox, QColorDialog, QHBoxLayout, QVBoxLayout, QDialog
+    QLineEdit, QCheckBox, QColorDialog, QHBoxLayout, QVBoxLayout, QDialog, QRadioButton, QButtonGroup
 )
 from PySide6.QtGui import QPainter, QPen, QColor, QTransform
 from PySide6.QtCore import Qt, QPoint
 
 TOLERANCE = 2
-
 
 class Line:
     def __init__(self, start_point, end_point, color, width):
@@ -226,7 +225,7 @@ class Canvas(QWidget):
             if not layer.visible:
                 continue
             for line in layer.lines:
-                pen = QPen(layer.color, layer.width / self.zoom_factor, Qt.SolidLine)
+                pen = QPen(line.color, line.width / self.zoom_factor, Qt.SolidLine)
                 painter.setPen(pen)
                 painter.drawLine(line.start_point, line.end_point)
                 self.draw_cross(painter, line.start_point)
@@ -262,8 +261,14 @@ class LayerItem(QWidget):
     def __init__(self, layer, parent=None):
         super().__init__(parent)
         self.layer = layer
+        self.parent = parent
 
         layout = QHBoxLayout()
+
+        self.radio_button = QRadioButton()
+        self.radio_button.setChecked(parent.canvas.current_layer_index == parent.canvas.layers.index(layer))
+        self.radio_button.toggled.connect(self.on_radio_button_toggled)
+        layout.addWidget(self.radio_button)
 
         self.name_input = QLineEdit(self.layer.name)
         self.name_input.textChanged.connect(self.on_name_changed)
@@ -290,6 +295,12 @@ class LayerItem(QWidget):
 
         self.setLayout(layout)
 
+    def on_radio_button_toggled(self, checked):
+        if checked:
+            index = self.parent.canvas.layers.index(self.layer)
+            self.parent.canvas.set_current_layer(index)
+            self.parent.update_layer_list()
+
     def on_name_changed(self, text):
         self.layer.name = text
 
@@ -306,7 +317,7 @@ class LayerItem(QWidget):
         self.layer.visible = bool(state)
 
     def on_remove_clicked(self):
-        self.parent().parent().remove_layer(self.layer)
+        self.parent.remove_layer(self.layer)
 
 
 class LayerManager(QDialog):
