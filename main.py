@@ -1,14 +1,17 @@
 import sys
 import math
+import time
+import ezdxf
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
     QColorDialog, QSpinBox, QLabel, QComboBox, QListWidget, QListWidgetItem,
-    QLineEdit, QCheckBox, QColorDialog, QHBoxLayout, QVBoxLayout, QDialog, QRadioButton, QButtonGroup
+    QLineEdit, QCheckBox, QHBoxLayout, QVBoxLayout, QDialog, QRadioButton, QButtonGroup
 )
 from PySide6.QtGui import QPainter, QPen, QColor, QTransform
 from PySide6.QtCore import Qt, QPoint
 
 TOLERANCE = 2
+
 
 class Line:
     def __init__(self, start_point, end_point, color, width):
@@ -42,9 +45,9 @@ class Line:
             if denom == 0:
                 return None
             intersect_x = ((A.x() * B.y() - A.y() * B.x()) * (C.x() - D.x()) - (A.x() - B.x()) * (
-                        C.x() * D.y() - C.y() * D.x())) / denom
+                    C.x() * D.y() - C.y() * D.x())) / denom
             intersect_y = ((A.x() * B.y() - A.y() * B.x()) * (C.y() - D.y()) - (A.y() - B.y()) * (
-                        C.x() * D.y() - C.y() * D.x())) / denom
+                    C.x() * D.y() - C.y() * D.x())) / denom
             return QPoint(intersect_x, intersect_y)
         return None
 
@@ -142,6 +145,7 @@ class Canvas(QWidget):
         self.current_line = None
         self.zoom_factor = 1.0
         self.offset = QPoint(0, 0)
+        self.dxf_file = None
 
     def set_current_layer(self, index):
         self.current_layer_index = index
@@ -154,6 +158,50 @@ class Canvas(QWidget):
             del self.layers[index]
             if self.current_layer_index >= len(self.layers):
                 self.current_layer_index = len(self.layers) - 1
+            self.save_dxf()
+
+    def load_dxf(self, file_path):
+        self.layers = []
+        doc = ezdxf.readfile(file_path)
+        for dxf_layer in doc.layers:
+            layer = Layer(name=dxf_layer.dxf.name, color=QColor(dxf_layer.color), width=1, visible=True)
+            self.layers.append(layer)
+
+        for entity in doc.entities:
+            if entity.dxftype() == 'LINE':
+                start_point = QPoint(entity.dxf.start.x, entity.dxf.start.y)
+                end_point = QPoint(entity.dxf.end.x, entity.dxf.end.y)
+                color = QColor(entity.dxf.color) if entity.dxf.hasattr('color') else QColor(Qt.black)
+                width = entity.dxf.lineweight if entity.dxf.hasattr('lineweight') else 1
+                line = Line(start_point, end_point, color, width)
+                layer_name = entity.dxf.layer
+                for layer in self.layers:
+                    if layer.name == layer_name:
+                        layer.add_line(line)
+                        break
+
+        self.current_layer_index = 0
+
+    def save_dxf(self):
+        if not self.dxf_file:
+            timestamp = time.strftime("%Y%m%d-%H%M%S")
+            self.dxf_file = f"drawing_{timestamp}.dxf"
+
+        doc = ezdxf.new()
+        for layer in self.layers:
+            doc.layers.add(name=layer.name, color=layer.color.rgb() & 0xFFFFFF, lineweight=layer.width)
+            for line in layer.lines:
+                doc.modelspace().add_line(
+                    (line.start_point.x(), line.start_point.y()),
+                    (line.end_point.x(), line.end_point.y()),
+                    dxfattribs={
+                        'layer': layer.name,
+                        'color': line.color.rgb() & 0xFFFFFF,
+                        'lineweight': line.width
+                    }
+                )
+
+        doc.saveas(self.dxf_file)
 
     def wheelEvent(self, event):
         mouse_pos = event.position().toPoint()
@@ -188,6 +236,7 @@ class Canvas(QWidget):
                     if line.contains_point(scene_pos):
                         layer.lines.remove(line)
                         self.update()
+                        self.save_dxf()
                         return
 
     def mouseMoveEvent(self, event):
@@ -213,6 +262,7 @@ class Canvas(QWidget):
             self.layers[self.current_layer_index].add_line(self.current_line)
             self.current_line = None
             self.update()
+            self.save_dxf()
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -362,11 +412,14 @@ class LayerManager(QDialog):
 
 
 class MainWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, file_path=None):
         super().__init__()
         self.setWindowTitle("PySide6 Drawing Application")
         self.setGeometry(100, 100, 800, 600)  # Initial window size
         self.canvas = Canvas()
+        if file_path:
+            self.canvas.load_dxf(file_path)
+            self.canvas.dxf_file = file_path
         self.layer_manager = LayerManager(self.canvas)
         self.layer_manager.show()  # Show the layer manager as a non-blocking modal
         self.init_ui()
@@ -387,6 +440,7 @@ class MainWindow(QMainWindow):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    window = MainWindow()
+    file_path = sys.argv[1] if len(sys.argv) > 1 else None
+    window = MainWindow(file_path)
     window.show()
     sys.exit(app.exec())
