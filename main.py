@@ -170,6 +170,8 @@ class Layer:
 class DrawingManager(QWidget):
     def __init__(self):
         super().__init__()
+        self.setMouseTracking(True)
+        self.setCursor(Qt.BlankCursor)
         self.layers = [Layer(name="Layer-0")]
         self.current_layer_index = 0
         self.current_line = None
