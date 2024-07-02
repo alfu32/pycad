@@ -2,8 +2,8 @@ import sys
 import math
 from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QColorDialog, \
     QSpinBox, QLabel, QComboBox
-from PySide6.QtGui import QPainter, QPen, QColor
-from PySide6.QtCore import Qt, QPoint
+from PySide6.QtGui import QPainter, QPen, QColor, QTransform
+from PySide6.QtCore import Qt, QPoint, QRect
 
 
 class Line:
@@ -35,6 +35,8 @@ class Canvas(QWidget):
         self.current_width = 2
         self.operation_mode = "Draw"
         self.setMouseTracking(True)
+        self.zoom_factor = 1.0
+        self.offset = QPoint(0, 0)
 
     def set_color(self, color):
         self.current_color = color
@@ -45,27 +47,55 @@ class Canvas(QWidget):
     def set_mode(self, mode):
         self.operation_mode = mode
 
+    def wheelEvent(self, event):
+        # Get the position of the mouse pointer
+        mouse_pos = event.position().toPoint()
+        # Calculate the zoom factor
+        delta = event.angleDelta().y()
+        if delta > 0:
+            factor = 1.1
+        else:
+            factor = 0.9
+        self.zoom_factor *= factor
+
+        # Adjust the offset to keep the zoom centered on the mouse pointer
+        old_center = self.map_to_scene(mouse_pos)
+        self.offset -= mouse_pos - self.map_to_view(old_center)
+
+        self.update()
+
+    def map_to_scene(self, point):
+        """Map a point from the widget coordinates to the scene coordinates."""
+        return (point - self.offset) / self.zoom_factor
+
+    def map_to_view(self, point):
+        """Map a point from the scene coordinates to the widget coordinates."""
+        return point * self.zoom_factor + self.offset
+
     def mousePressEvent(self, event):
+        scene_pos = self.map_to_scene(event.pos())
         if self.operation_mode == "Draw":
-            self.current_line = Line(event.pos(), event.pos(), self.current_color, self.current_width)
+            self.current_line = Line(scene_pos, scene_pos, self.current_color, self.current_width)
         elif self.operation_mode == "Delete":
             for line in self.lines:
-                if line.contains_point(event.pos()):
+                if line.contains_point(scene_pos):
                     self.lines.remove(line)
                     self.update()
                     break
 
     def mouseMoveEvent(self, event):
+        scene_pos = self.map_to_scene(event.pos())
         if self.operation_mode == "Draw" and self.current_line:
-            end_point = event.pos()
+            end_point = scene_pos
             if event.modifiers() & Qt.ControlModifier:
                 end_point = self.snap_to_angle(self.current_line.start_point, end_point)
             self.current_line.end_point = end_point
             self.update()
 
     def mouseReleaseEvent(self, event):
+        scene_pos = self.map_to_scene(event.pos())
         if self.operation_mode == "Draw" and self.current_line:
-            end_point = event.pos()
+            end_point = scene_pos
             if event.modifiers() & Qt.ControlModifier:
                 end_point = self.snap_to_angle(self.current_line.start_point, end_point)
             self.current_line.end_point = end_point
@@ -75,12 +105,17 @@ class Canvas(QWidget):
 
     def paintEvent(self, event):
         painter = QPainter(self)
+        transform = QTransform()
+        transform.translate(self.offset.x(), self.offset.y())
+        transform.scale(self.zoom_factor, self.zoom_factor)
+        painter.setTransform(transform)
+
         for line in self.lines:
-            pen = QPen(line.color, line.width, Qt.SolidLine)
+            pen = QPen(line.color, line.width / self.zoom_factor, Qt.SolidLine)
             painter.setPen(pen)
             painter.drawLine(line.start_point, line.end_point)
         if self.current_line:
-            pen = QPen(self.current_line.color, self.current_line.width, Qt.SolidLine)
+            pen = QPen(self.current_line.color, self.current_line.width / self.zoom_factor, Qt.SolidLine)
             painter.setPen(pen)
             painter.drawLine(self.current_line.start_point, self.current_line.end_point)
 
