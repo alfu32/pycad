@@ -3,7 +3,7 @@ import math
 from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QColorDialog, \
     QSpinBox, QLabel, QComboBox
 from PySide6.QtGui import QPainter, QPen, QColor, QTransform
-from PySide6.QtCore import Qt, QPoint, QRect
+from PySide6.QtCore import Qt, QPoint
 
 
 class Line:
@@ -56,11 +56,12 @@ class Canvas(QWidget):
             factor = 1.1
         else:
             factor = 0.9
+
+        old_zoom_factor = self.zoom_factor
         self.zoom_factor *= factor
 
         # Adjust the offset to keep the zoom centered on the mouse pointer
-        old_center = self.map_to_scene(mouse_pos)
-        self.offset -= mouse_pos - self.map_to_view(old_center)
+        self.offset = self.offset - mouse_pos + (mouse_pos / old_zoom_factor) * self.zoom_factor
 
         self.update()
 
