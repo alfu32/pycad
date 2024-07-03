@@ -1,3 +1,10 @@
 @echo off
-call .venv\Scripts\activate.bat
-start "python" "%~dp0\pycad\main.py" %*
+
+echo "%~dp0.venv\Scripts\activate.bat"
+call "%~dp0.venv\Scripts\activate.bat"
+
+echo "%~dp0pycad\main.py"
+start "python" "%~dp0pycad\main.py" %*
+
+deactivate
+pause
