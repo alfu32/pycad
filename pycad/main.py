@@ -4,7 +4,6 @@ import time
 from typing import List
 
 import ezdxf
-from PyQt5.uic.properties import QtCore
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QPushButton,
     QColorDialog, QSpinBox, QListWidget, QListWidgetItem,
@@ -45,6 +44,9 @@ def distance(point1, point2):
 
 
 def find_nearest_point(point_list: List[QPoint], p: QPoint) -> QPoint:
+    if len(point_list) == 0:
+        return p
+
     nearest_point = point_list[0]
     min_distance = distance(point_list[0], p)
 
@@ -619,13 +621,13 @@ class MainWindow(QMainWindow):
         self.grid_snap_x: QSpinBox = None
         self.grid_snap_y: QSpinBox = None
         self.snap_distance: QSpinBox = None
-        self.setWindowTitle("PyCAD 14")
         self.setGeometry(100, 100, 800, 600)  # Initial window size
         self.drawing_manager = DrawingManager()
         self.drawing_manager.setStyleSheet("background-color: black;")
         if file_path:
             self.drawing_manager.load_dxf(file_path)
             self.drawing_manager.dxf_file = file_path
+        self.setWindowTitle(f"PyCAD 14 - {self.drawing_manager.dxf_file}")
         self.layer_manager = LayerManager(self.drawing_manager)
         self.layer_manager.setMaximumWidth(720)
         self.layer_manager.setMinimumWidth(640)
