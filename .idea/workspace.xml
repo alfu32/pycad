@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="25043644-4411-4e1b-9269-2b584d342d14" name="Changes" comment="feat(snaps):">
+    <list default="true" id="25043644-4411-4e1b-9269-2b584d342d14" name="Changes" comment="fix(zoom):">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/drawing_20240702-153256.dxf" beforeDir="false" afterPath="$PROJECT_DIR$/drawing_20240702-153256.dxf" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
@@ -173,7 +173,15 @@
       <option name="project" value="LOCAL" />
       <updated>1719943978861</updated>
     </task>
-    <option name="localTasksCounter" value="13" />
+    <task id="LOCAL-00013" summary="fix(zoom):">
+      <option name="closed" value="true" />
+      <created>1719990650887</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1719990650887</updated>
+    </task>
+    <option name="localTasksCounter" value="14" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -183,6 +191,7 @@
     <MESSAGE value="feat(layer-manager):" />
     <MESSAGE value="feat(dxf):" />
     <MESSAGE value="feat(snaps):" />
-    <option name="LAST_COMMIT_MESSAGE" value="feat(snaps):" />
+    <MESSAGE value="fix(zoom):" />
+    <option name="LAST_COMMIT_MESSAGE" value="fix(zoom):" />
   </component>
 </project>

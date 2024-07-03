@@ -4,15 +4,16 @@ import time
 from typing import List
 
 import ezdxf
+from PyQt5.uic.properties import QtCore
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QPushButton,
     QColorDialog, QSpinBox, QListWidget, QListWidgetItem,
     QLineEdit, QCheckBox, QHBoxLayout, QVBoxLayout, QDialog, QRadioButton, QStyle, QLabel,
 )
-from PySide6.QtGui import QPainter, QPen, QColor, QTransform
+from PySide6.QtGui import QPainter, QPen, QColor, QTransform, QMouseEvent
 from PySide6.QtCore import Qt, QPoint
 from ezdxf.sections.table import (
-    LayerTable,Layer
+    LayerTable, Layer
 )
 
 TOLERANCE = 2
@@ -21,6 +22,10 @@ lwindex = [0, 5, 9, 13, 15, 18, 20, 25,
            30, 35, 40, 50, 53, 60, 70, 80,
            90, 100, 106, 120, 140, 158, 200,
            ]
+lwrindex = {0: 0, 5: 1, 9: 2, 13: 3, 15: 4, 18: 5, 20: 5, 25: 6,
+            30: 7, 35: 8, 40: 9, 50: 10, 53: 11, 60: 12, 70: 13, 80: 13,
+            90: 14, 100: 15, 106: 16, 120: 17, 140: 18, 158: 19, 200: 20,
+            }
 
 
 def round_to_nearest(value, base):
@@ -185,7 +190,10 @@ class DrawingManager(QWidget):
         self.gridSpacing = QPoint(10, 10)
         self.flSnapPoints = True
         self.snapDistance = 5
-        self.snapped_pointer = QPoint(0, 0)
+        self.model_point_snapped = QPoint(0, 0)
+        self.model_point_raw = QPoint(0, 0)
+        self.screen_point_raw = QPoint(0, 0)
+        self.screen_point_snapped = QPoint(0, 0)
 
     def set_current_layer(self, index):
         self.current_layer_index = index
@@ -210,9 +218,13 @@ class DrawingManager(QWidget):
     def load_dxf(self, file_path):
         self.layers = []
         doc = ezdxf.readfile(file_path)
-        doc_layers:LayerTable=doc.layers
+        doc_layers: LayerTable = doc.layers
         for dxf_layer in doc_layers:
-            layer = LayerModel(name=dxf_layer.dxf.name, color=QColor(self.get_true_color(dxf_layer)), width=1, visible=True)
+            color = QColor(self.get_true_color(dxf_layer))
+            width0 = dxf_layer.dxf.lineweight if dxf_layer.dxf.hasattr('lineweight') else 1
+            width = lwrindex[width0] if width0 >=0 else lwrindex[5]
+            layer = LayerModel(name=dxf_layer.dxf.name, color=color, width=width,
+                               visible=True)
             self.layers.append(layer)
 
         for entity in doc.entities:
@@ -292,34 +304,37 @@ class DrawingManager(QWidget):
         p = QPoint(pos.x(), pos.y())
         if self.flSnapPoints:
             nearest_point = find_nearest_point(self.get_all_points(), pos)
-            if nearest_point is not None and distance(nearest_point, pos) <= self.snapDistance:
+            if nearest_point is not None and distance(nearest_point, pos) <= (self.snapDistance/self.zoom_factor):
                 p = QPoint(nearest_point.x(), nearest_point.y())
         if self.flSnapGrid:
             p = QPoint(round_to_nearest(pos.x(), self.gridSpacing.x()), round_to_nearest(pos.y(), self.gridSpacing.y()))
-        self.snapped_pointer = QPoint(p.x(), p.y())
+        self.model_point_snapped = QPoint(p.x(), p.y())
         return p
 
-    def mousePressEvent(self, event):
-        scene_pos = self.map_to_scene(event.pos())
+    def update_mouse_positions(self, event: QMouseEvent):
+        self.screen_point_raw = event.pos()
+        self.model_point_raw = self.map_to_scene(event.pos())
+        self.model_point_snapped = self.apply_mouse_input_modifiers(self.model_point_raw)
+        self.screen_point_snapped = self.map_to_view(self.model_point_snapped)
+
+    def mousePressEvent(self, event: QMouseEvent):
+        self.update_mouse_positions(event)
         if event.button() == Qt.LeftButton:
-            scene_pos = self.apply_mouse_input_modifiers(scene_pos)
             layer = self.layers[self.current_layer_index]
-            self.current_line = Line(scene_pos, scene_pos, layer.color, layer.width)
+            self.current_line = Line(self.model_point_snapped, self.model_point_snapped, layer.color, layer.width)
         elif event.button() == Qt.RightButton:
             clayer = self.current_layer()
             for line in clayer.lines:
-                if line.contains_point(scene_pos):
+                if line.contains_point(self.model_point_raw):
                     clayer.lines.remove(line)
                     self.update()
                     self.save_dxf()
                     return
 
     def mouseMoveEvent(self, event):
-        scene_pos = self.map_to_scene(event.pos())
-        scene_pos = self.apply_mouse_input_modifiers(scene_pos)
-        self.snapped_pointer = scene_pos
+        self.update_mouse_positions(event)
         if self.current_line:
-            end_point = scene_pos
+            end_point = self.model_point_snapped
             if event.modifiers() & Qt.ControlModifier:
                 end_point = self.snap_to_angle(self.current_line.start_point, end_point)
             self.current_line.end_point = end_point
@@ -330,10 +345,9 @@ class DrawingManager(QWidget):
         self.update()
 
     def mouseReleaseEvent(self, event):
-        scene_pos = self.map_to_scene(event.pos())
-        scene_pos = self.apply_mouse_input_modifiers(scene_pos)
+        self.update_mouse_positions(event)
         if self.current_line:
-            end_point = scene_pos
+            end_point = self.model_point_snapped
             if event.modifiers() & Qt.ControlModifier:
                 end_point = self.snap_to_angle(self.current_line.start_point, end_point)
             self.current_line.end_point = end_point
@@ -344,6 +358,19 @@ class DrawingManager(QWidget):
 
     def paintEvent(self, event):
         painter = QPainter(self)
+
+        # Draw endpoint markers
+        for layer in self.layers:
+            if not layer.visible:
+                continue
+            for line in layer.lines:
+                self.draw_rect(painter, self.map_to_view(line.start_point))
+                self.draw_rect(painter, self.map_to_view(line.end_point))
+
+        if self.current_line:
+            self.draw_rect(painter, self.map_to_view(self.current_line.start_point))
+            self.draw_rect(painter, self.map_to_view(self.current_line.end_point))
+
         transform = QTransform()
         transform.translate(self.offset.x(), self.offset.y())
         transform.scale(self.zoom_factor, self.zoom_factor)
@@ -356,32 +383,41 @@ class DrawingManager(QWidget):
                 pen = QPen(layer.color, layer.width / self.zoom_factor, Qt.SolidLine)
                 painter.setPen(pen)
                 painter.drawLine(line.start_point, line.end_point)
-                self.draw_cross(painter, line.start_point)
-                self.draw_cross(painter, line.end_point)
         if self.current_line:
             pen = QPen(self.current_layer().color, self.current_layer().width / self.zoom_factor, Qt.SolidLine)
             painter.setPen(pen)
             painter.drawLine(self.current_line.start_point, self.current_line.end_point)
-            self.draw_cross(painter, self.current_line.start_point)
-            self.draw_cross(painter, self.current_line.end_point)
-        self.draw_cursor(painter, self.snapped_pointer)
+
+        # Reset transformation to draw crosses in screen coordinates
+        painter.setTransform(QTransform())
+        self.draw_cursor(painter, self.screen_point_snapped)
 
     def draw_cross(self, painter: QPainter, point: QPoint):
+        x = point.x()
+        y = point.y()
         pen = QPen(QColor(Qt.red), 2, Qt.SolidLine)
         painter.setPen(pen)
-        size = 2
-        painter.drawLine(point.x() - size, point.y() - size, point.x() + size, point.y() + size)
-        painter.drawLine(point.x() + size, point.y() - size, point.x() - size, point.y() + size)
+        size = 4
+        painter.drawLine(x - size, y - size, x + size, y + size)
+        painter.drawLine(x + size, y - size, x - size, y + size)
+
+    def draw_rect(self, painter: QPainter, point: QPoint):
+        pen = QPen(QColor(Qt.blue), 1, Qt.SolidLine)
+        painter.setPen(pen)
+        color: QColor = QColor(0x0055ff)
+        size = 4
+        painter.fillRect(point.x() - size, point.y() - size, 2 * size, 2 * size, color)
+        painter.drawRect(point.x() - size, point.y() - size, 2 * size, 2 * size)
 
     def draw_cursor(self, painter: QPainter, point: QPoint):
         x = point.x()
         y = point.y()
         pen = QPen(QColor(Qt.black), 1, Qt.SolidLine)
         painter.setPen(pen)
-        size = 5
+        size = 8
         painter.drawLine(x - 2 * size, y, x + 2 * size, y)
         painter.drawLine(x, y - 2 * size, x, y + 2 * size)
-        painter.drawRect(x - size, y - size, 2 * size, 2 * size)
+        painter.drawRect(x - size / 2, y - size / 2, size, size)
 
     def snap_to_angle(self, start_point, end_point):
         dx = end_point.x() - start_point.x()
@@ -525,14 +561,18 @@ class LayerManager(QDialog):
 class MainWindow(QMainWindow):
     def __init__(self, file_path=None):
         super().__init__()
-        self.setWindowTitle("PySide6 Drawing Application")
+        self.setWindowTitle("PyCAD 14")
         self.setGeometry(100, 100, 800, 600)  # Initial window size
         self.drawing_manager = DrawingManager()
-        self.drawing_manager.setStyleSheet("background-color: #000000;")
+        self.drawing_manager.setStyleSheet("background-color: black;")
         if file_path:
             self.drawing_manager.load_dxf(file_path)
             self.drawing_manager.dxf_file = file_path
         self.layer_manager = LayerManager(self.drawing_manager)
+        self.layer_manager.setMaximumWidth(720)
+        self.layer_manager.setMinimumWidth(640)
+        self.layer_manager.setMaximumHeight(720)
+        self.layer_manager.setMinimumHeight(480)
         self.layer_manager.show()  # Show the layer manager as a non-blocking modal
         self.init_ui()
 
