@@ -493,7 +493,7 @@ $SKPOLY
   9
 $TDCREATE
  40
-2460494.648287037
+2460495.3770023147
   9
 $TDUCREATE
  40
@@ -501,7 +501,7 @@ $TDUCREATE
   9
 $TDUPDATE
  40
-2460494.648287037
+2460495.3770023147
   9
 $TDUUPDATE
  40
@@ -553,7 +553,7 @@ $SPLINESEGS
   9
 $HANDSEED
   5
-62
+6E
   9
 $SURFTAB1
  70
@@ -933,11 +933,11 @@ $PSTYLEMODE
   9
 $FINGERPRINTGUID
   2
-{9DC2896F-B9E8-4009-B02D-0C0A77EAB317}
+{63C92781-F18B-4552-84CD-D8609DC4807C}
   9
 $VERSIONGUID
   2
-{CA5D5234-C497-46C9-991A-AC1F479FEBEA}
+{32F6A886-8E64-4EFC-BC3F-99B8BAF6F1FB}
   9
 $EXTNAMES
 290
@@ -1553,7 +1553,7 @@ LAYER
 100
 AcDbSymbolTable
  70
-4
+5
   0
 LAYER
   5
@@ -1621,11 +1621,11 @@ Layer-0
  62
 7
 420
-0
+5614335
   6
 Continuous
 370
-9
+5
 390
 13
 347
@@ -1633,7 +1633,7 @@ Continuous
   0
 LAYER
   5
-3C
+43
 330
 1
 100
@@ -1652,6 +1652,32 @@ Layer-1
 Continuous
 370
 5
+390
+13
+347
+21
+  0
+LAYER
+  5
+66
+330
+1
+100
+AcDbSymbolTableRecord
+100
+AcDbLayerTableRecord
+  2
+Layer-4
+ 70
+0
+ 62
+7
+420
+5614080
+  6
+Continuous
+370
+9
 390
 13
 347
@@ -1757,7 +1783,7 @@ ACAD
   0
 APPID
   5
-5F
+6B
 330
 3
 100
@@ -1771,7 +1797,7 @@ HATCHBACKGROUNDCOLOR
   0
 APPID
   5
-60
+6C
 330
 3
 100
@@ -2088,18 +2114,20 @@ LINE
 AcDbEntity
   8
 Layer-0
+370
+5
 100
 AcDbLine
  10
 226.0
  20
-394.0
+167.0
  30
 0.0
  11
-226.0
+390.0
  21
-449.0
+167.0
  31
 0.0
   0
@@ -2112,222 +2140,8 @@ LINE
 AcDbEntity
   8
 Layer-0
-100
-AcDbLine
- 10
-158.0
- 20
-394.0
- 30
-0.0
- 11
-226.0
- 21
-394.0
- 31
-0.0
-  0
-LINE
-  5
-32
-330
-17
-100
-AcDbEntity
-  8
-Layer-0
-100
-AcDbLine
- 10
-226.0
- 20
-140.0
- 30
-0.0
- 11
-226.0
- 21
-167.0
- 31
-0.0
-  0
-LINE
-  5
-33
-330
-17
-100
-AcDbEntity
-  8
-Layer-0
-100
-AcDbLine
- 10
-226.0
- 20
-167.0
- 30
-0.0
- 11
-226.0
- 21
-394.0
- 31
-0.0
-  0
-LINE
-  5
-34
-330
-17
-100
-AcDbEntity
-  8
-Layer-0
-100
-AcDbLine
- 10
-550.0
- 20
-167.0
- 30
-0.0
- 11
-647.0
- 21
-167.0
- 31
-0.0
-  0
-LINE
-  5
-35
-330
-17
-100
-AcDbEntity
-  8
-Layer-0
-100
-AcDbLine
- 10
-226.0
- 20
-167.0
- 30
-0.0
- 11
-550.0
- 21
-167.0
- 31
-0.0
-  0
-LINE
-  5
-36
-330
-17
-100
-AcDbEntity
-  8
-Layer-0
-100
-AcDbLine
- 10
-550.0
- 20
-394.0
- 30
-0.0
- 11
-706.0
- 21
-394.0
- 31
-0.0
-  0
-LINE
-  5
-37
-330
-17
-100
-AcDbEntity
-  8
-Layer-0
-100
-AcDbLine
- 10
-550.0
- 20
-394.0
- 30
-0.0
- 11
-550.0
- 21
-167.0
- 31
-0.0
-  0
-LINE
-  5
-38
-330
-17
-100
-AcDbEntity
-  8
-Layer-0
-100
-AcDbLine
- 10
-226.0
- 20
-394.0
- 30
-0.0
- 11
-550.0
- 21
-394.0
- 31
-0.0
-  0
-LINE
-  5
-39
-330
-17
-100
-AcDbEntity
-  8
-Layer-0
-100
-AcDbLine
- 10
-175.0
- 20
-167.0
- 30
-0.0
- 11
-226.0
- 21
-167.0
- 31
-0.0
-  0
-LINE
-  5
-3A
-330
-17
-100
-AcDbEntity
-  8
-Layer-0
+370
+5
 100
 AcDbLine
  10
@@ -2345,6 +2159,240 @@ AcDbLine
   0
 LINE
   5
+32
+330
+17
+100
+AcDbEntity
+  8
+Layer-0
+370
+5
+100
+AcDbLine
+ 10
+226.0
+ 20
+394.0
+ 30
+0.0
+ 11
+390.0
+ 21
+394.0
+ 31
+0.0
+  0
+LINE
+  5
+33
+330
+17
+100
+AcDbEntity
+  8
+Layer-0
+370
+5
+100
+AcDbLine
+ 10
+226.0
+ 20
+394.0
+ 30
+0.0
+ 11
+226.0
+ 21
+449.0
+ 31
+0.0
+  0
+LINE
+  5
+34
+330
+17
+100
+AcDbEntity
+  8
+Layer-0
+370
+5
+100
+AcDbLine
+ 10
+226.0
+ 20
+140.0
+ 30
+0.0
+ 11
+226.0
+ 21
+167.0
+ 31
+0.0
+  0
+LINE
+  5
+35
+330
+17
+100
+AcDbEntity
+  8
+Layer-0
+370
+5
+100
+AcDbLine
+ 10
+450.0
+ 20
+60.0
+ 30
+0.0
+ 11
+450.0
+ 21
+520.0
+ 31
+0.0
+  0
+LINE
+  5
+36
+330
+17
+100
+AcDbEntity
+  8
+Layer-0
+370
+5
+100
+AcDbLine
+ 10
+390.0
+ 20
+167.0
+ 30
+0.0
+ 11
+390.0
+ 21
+394.0
+ 31
+0.0
+  0
+LINE
+  5
+37
+330
+17
+100
+AcDbEntity
+  8
+Layer-0
+370
+5
+100
+AcDbLine
+ 10
+390.0
+ 20
+394.0
+ 30
+0.0
+ 11
+390.0
+ 21
+520.0
+ 31
+0.0
+  0
+LINE
+  5
+38
+330
+17
+100
+AcDbEntity
+  8
+Layer-0
+370
+5
+100
+AcDbLine
+ 10
+158.0
+ 20
+394.0
+ 30
+0.0
+ 11
+226.0
+ 21
+394.0
+ 31
+0.0
+  0
+LINE
+  5
+39
+330
+17
+100
+AcDbEntity
+  8
+Layer-0
+370
+5
+100
+AcDbLine
+ 10
+60.0
+ 20
+290.0
+ 30
+0.0
+ 11
+740.0
+ 21
+290.0
+ 31
+0.0
+  0
+LINE
+  5
+3A
+330
+17
+100
+AcDbEntity
+  8
+Layer-0
+370
+5
+100
+AcDbLine
+ 10
+175.0
+ 20
+167.0
+ 30
+0.0
+ 11
+226.0
+ 21
+167.0
+ 31
+0.0
+  0
+LINE
+  5
 3B
 330
 17
@@ -2352,6 +2400,8 @@ LINE
 AcDbEntity
   8
 Layer-0
+370
+5
 100
 AcDbLine
  10
@@ -2369,13 +2419,223 @@ AcDbLine
   0
 LINE
   5
+3C
+330
+17
+100
+AcDbEntity
+  8
+Layer-0
+370
+5
+100
+AcDbLine
+ 10
+226.0
+ 20
+167.0
+ 30
+0.0
+ 11
+226.0
+ 21
+394.0
+ 31
+0.0
+  0
+LINE
+  5
 3D
 330
 17
 100
 AcDbEntity
   8
+Layer-0
+370
+5
+100
+AcDbLine
+ 10
+550.0
+ 20
+167.0
+ 30
+0.0
+ 11
+647.0
+ 21
+167.0
+ 31
+0.0
+  0
+LINE
+  5
+3E
+330
+17
+100
+AcDbEntity
+  8
+Layer-0
+370
+5
+100
+AcDbLine
+ 10
+390.0
+ 20
+394.0
+ 30
+0.0
+ 11
+550.0
+ 21
+394.0
+ 31
+0.0
+  0
+LINE
+  5
+3F
+330
+17
+100
+AcDbEntity
+  8
+Layer-0
+370
+5
+100
+AcDbLine
+ 10
+550.0
+ 20
+394.0
+ 30
+0.0
+ 11
+550.0
+ 21
+167.0
+ 31
+0.0
+  0
+LINE
+  5
+40
+330
+17
+100
+AcDbEntity
+  8
+Layer-0
+370
+5
+100
+AcDbLine
+ 10
+390.0
+ 20
+70.0
+ 30
+0.0
+ 11
+390.0
+ 21
+167.0
+ 31
+0.0
+  0
+LINE
+  5
+41
+330
+17
+100
+AcDbEntity
+  8
+Layer-0
+370
+5
+100
+AcDbLine
+ 10
+390.0
+ 20
+167.0
+ 30
+0.0
+ 11
+550.0
+ 21
+167.0
+ 31
+0.0
+  0
+LINE
+  5
+42
+330
+17
+100
+AcDbEntity
+  8
+Layer-0
+370
+5
+100
+AcDbLine
+ 10
+550.0
+ 20
+394.0
+ 30
+0.0
+ 11
+706.0
+ 21
+394.0
+ 31
+0.0
+  0
+LINE
+  5
+44
+330
+17
+100
+AcDbEntity
+  8
 Layer-1
+370
+5
+100
+AcDbLine
+ 10
+158.0
+ 20
+477.0
+ 30
+0.0
+ 11
+647.0
+ 21
+477.0
+ 31
+0.0
+  0
+LINE
+  5
+45
+330
+17
+100
+AcDbEntity
+  8
+Layer-1
+370
+5
 100
 AcDbLine
  10
@@ -2393,37 +2653,15 @@ AcDbLine
   0
 LINE
   5
-3E
+46
 330
 17
 100
 AcDbEntity
   8
 Layer-1
-100
-AcDbLine
- 10
-158.0
- 20
-477.0
- 30
-0.0
- 11
-647.0
- 21
-477.0
- 31
-0.0
-  0
-LINE
-  5
-3F
-330
-17
-100
-AcDbEntity
-  8
-Layer-1
+370
+5
 100
 AcDbLine
  10
@@ -2441,13 +2679,15 @@ AcDbLine
   0
 LINE
   5
-40
+47
 330
 17
 100
 AcDbEntity
   8
 Layer-1
+370
+5
 100
 AcDbLine
  10
@@ -2465,13 +2705,15 @@ AcDbLine
   0
 LINE
   5
-41
+48
 330
 17
 100
 AcDbEntity
   8
 Layer-1
+370
+5
 100
 AcDbLine
  10
@@ -2489,13 +2731,15 @@ AcDbLine
   0
 LINE
   5
-42
+49
 330
 17
 100
 AcDbEntity
   8
 Layer-1
+370
+5
 100
 AcDbLine
  10
@@ -2513,13 +2757,15 @@ AcDbLine
   0
 LINE
   5
-43
+4A
 330
 17
 100
 AcDbEntity
   8
 Layer-1
+370
+5
 100
 AcDbLine
  10
@@ -2537,13 +2783,15 @@ AcDbLine
   0
 LINE
   5
-44
+4B
 330
 17
 100
 AcDbEntity
   8
 Layer-1
+370
+5
 100
 AcDbLine
  10
@@ -2561,13 +2809,15 @@ AcDbLine
   0
 LINE
   5
-45
+4C
 330
 17
 100
 AcDbEntity
   8
 Layer-1
+370
+5
 100
 AcDbLine
  10
@@ -2585,13 +2835,15 @@ AcDbLine
   0
 LINE
   5
-46
+4D
 330
 17
 100
 AcDbEntity
   8
 Layer-1
+370
+5
 100
 AcDbLine
  10
@@ -2609,13 +2861,15 @@ AcDbLine
   0
 LINE
   5
-47
+4E
 330
 17
 100
 AcDbEntity
   8
 Layer-1
+370
+5
 100
 AcDbLine
  10
@@ -2633,13 +2887,15 @@ AcDbLine
   0
 LINE
   5
-48
+4F
 330
 17
 100
 AcDbEntity
   8
 Layer-1
+370
+5
 100
 AcDbLine
  10
@@ -2657,37 +2913,15 @@ AcDbLine
   0
 LINE
   5
-49
+50
 330
 17
 100
 AcDbEntity
   8
 Layer-1
-100
-AcDbLine
- 10
-158.0
- 20
-229.0
- 30
-0.0
- 11
-158.0
- 21
-351.0
- 31
-0.0
-  0
-LINE
-  5
-4A
-330
-17
-100
-AcDbEntity
-  8
-Layer-1
+370
+5
 100
 AcDbLine
  10
@@ -2705,13 +2939,41 @@ AcDbLine
   0
 LINE
   5
-4B
+51
 330
 17
 100
 AcDbEntity
   8
 Layer-1
+370
+5
+100
+AcDbLine
+ 10
+158.0
+ 20
+229.0
+ 30
+0.0
+ 11
+158.0
+ 21
+351.0
+ 31
+0.0
+  0
+LINE
+  5
+52
+330
+17
+100
+AcDbEntity
+  8
+Layer-1
+370
+5
 100
 AcDbLine
  10
@@ -2729,13 +2991,15 @@ AcDbLine
   0
 LINE
   5
-4C
+53
 330
 17
 100
 AcDbEntity
   8
 Layer-1
+370
+5
 100
 AcDbLine
  10
@@ -2753,13 +3017,15 @@ AcDbLine
   0
 LINE
   5
-4D
+54
 330
 17
 100
 AcDbEntity
   8
 Layer-1
+370
+5
 100
 AcDbLine
  10
@@ -2777,13 +3043,15 @@ AcDbLine
   0
 LINE
   5
-4E
+55
 330
 17
 100
 AcDbEntity
   8
 Layer-1
+370
+5
 100
 AcDbLine
  10
@@ -2801,13 +3069,15 @@ AcDbLine
   0
 LINE
   5
-4F
+56
 330
 17
 100
 AcDbEntity
   8
 Layer-1
+370
+5
 100
 AcDbLine
  10
@@ -2825,13 +3095,15 @@ AcDbLine
   0
 LINE
   5
-50
+57
 330
 17
 100
 AcDbEntity
   8
 Layer-1
+370
+5
 100
 AcDbLine
  10
@@ -2849,13 +3121,15 @@ AcDbLine
   0
 LINE
   5
-51
+58
 330
 17
 100
 AcDbEntity
   8
 Layer-1
+370
+5
 100
 AcDbLine
  10
@@ -2873,13 +3147,15 @@ AcDbLine
   0
 LINE
   5
-52
+59
 330
 17
 100
 AcDbEntity
   8
 Layer-1
+370
+5
 100
 AcDbLine
  10
@@ -2897,13 +3173,15 @@ AcDbLine
   0
 LINE
   5
-53
+5A
 330
 17
 100
 AcDbEntity
   8
 Layer-1
+370
+5
 100
 AcDbLine
  10
@@ -2921,13 +3199,15 @@ AcDbLine
   0
 LINE
   5
-54
+5B
 330
 17
 100
 AcDbEntity
   8
 Layer-1
+370
+5
 100
 AcDbLine
  10
@@ -2945,13 +3225,15 @@ AcDbLine
   0
 LINE
   5
-55
+5C
 330
 17
 100
 AcDbEntity
   8
 Layer-1
+370
+5
 100
 AcDbLine
  10
@@ -2969,13 +3251,15 @@ AcDbLine
   0
 LINE
   5
-56
+5D
 330
 17
 100
 AcDbEntity
   8
 Layer-1
+370
+5
 100
 AcDbLine
  10
@@ -2993,13 +3277,15 @@ AcDbLine
   0
 LINE
   5
-57
+5E
 330
 17
 100
 AcDbEntity
   8
 Layer-1
+370
+5
 100
 AcDbLine
  10
@@ -3017,13 +3303,15 @@ AcDbLine
   0
 LINE
   5
-58
+5F
 330
 17
 100
 AcDbEntity
   8
 Layer-1
+370
+5
 100
 AcDbLine
  10
@@ -3041,13 +3329,15 @@ AcDbLine
   0
 LINE
   5
-59
+60
 330
 17
 100
 AcDbEntity
   8
 Layer-1
+370
+5
 100
 AcDbLine
  10
@@ -3065,13 +3355,15 @@ AcDbLine
   0
 LINE
   5
-5A
+61
 330
 17
 100
 AcDbEntity
   8
 Layer-1
+370
+5
 100
 AcDbLine
  10
@@ -3089,13 +3381,15 @@ AcDbLine
   0
 LINE
   5
-5B
+62
 330
 17
 100
 AcDbEntity
   8
 Layer-1
+370
+5
 100
 AcDbLine
  10
@@ -3113,13 +3407,15 @@ AcDbLine
   0
 LINE
   5
-5C
+63
 330
 17
 100
 AcDbEntity
   8
 Layer-1
+370
+5
 100
 AcDbLine
  10
@@ -3137,13 +3433,15 @@ AcDbLine
   0
 LINE
   5
-5D
+64
 330
 17
 100
 AcDbEntity
   8
 Layer-1
+370
+5
 100
 AcDbLine
  10
@@ -3161,13 +3459,15 @@ AcDbLine
   0
 LINE
   5
-5E
+65
 330
 17
 100
 AcDbEntity
   8
 Layer-1
+370
+5
 100
 AcDbLine
  10
@@ -3180,6 +3480,110 @@ AcDbLine
 158.0
  21
 136.0
+ 31
+0.0
+  0
+LINE
+  5
+67
+330
+17
+100
+AcDbEntity
+  8
+Layer-4
+370
+9
+100
+AcDbLine
+ 10
+60.0
+ 20
+420.0
+ 30
+0.0
+ 11
+60.0
+ 21
+65.0
+ 31
+0.0
+  0
+LINE
+  5
+68
+330
+17
+100
+AcDbEntity
+  8
+Layer-4
+370
+9
+100
+AcDbLine
+ 10
+60.0
+ 20
+420.0
+ 30
+0.0
+ 11
+750.0
+ 21
+420.0
+ 31
+0.0
+  0
+LINE
+  5
+69
+330
+17
+100
+AcDbEntity
+  8
+Layer-4
+370
+9
+100
+AcDbLine
+ 10
+750.0
+ 20
+420.0
+ 30
+0.0
+ 11
+750.0
+ 21
+65.0
+ 31
+0.0
+  0
+LINE
+  5
+6A
+330
+17
+100
+AcDbEntity
+  8
+Layer-4
+370
+9
+100
+AcDbLine
+ 10
+60.0
+ 20
+65.0
+ 30
+0.0
+ 11
+750.0
+ 21
+65.0
  31
 0.0
   0
@@ -4195,7 +4599,7 @@ CREATED_BY_EZDXF
   3
 WRITTEN_BY_EZDXF
 350
-61
+6D
   0
 DICTIONARYVAR
   5
@@ -4207,11 +4611,11 @@ DictionaryVariables
 280
 0
   1
-1.3.1 @ 2024-07-02T13:33:32.191744+00:00
+1.3.1 @ 2024-07-03T07:02:53.494558+00:00
   0
 DICTIONARYVAR
   5
-61
+6D
 330
 2D
 100
@@ -4219,7 +4623,7 @@ DictionaryVariables
 280
 0
   1
-1.3.1 @ 2024-07-02T13:33:32.194745+00:00
+1.3.1 @ 2024-07-03T07:02:53.497559+00:00
   0
 ENDSEC
   0

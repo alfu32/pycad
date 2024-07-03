@@ -11,6 +11,9 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtGui import QPainter, QPen, QColor, QTransform
 from PySide6.QtCore import Qt, QPoint
+from ezdxf.sections.table import (
+    LayerTable,Layer
+)
 
 TOLERANCE = 2
 
@@ -100,7 +103,7 @@ class Line:
         return hash((min(start_tuple, end_tuple), max(start_tuple, end_tuple)))
 
 
-class Layer:
+class LayerModel:
     def __init__(self, name="Layer", color=QColor(Qt.black), width=2, visible=True):
         self.name = name
         self.color = color
@@ -172,7 +175,7 @@ class DrawingManager(QWidget):
         super().__init__()
         self.setMouseTracking(True)
         self.setCursor(Qt.BlankCursor)
-        self.layers = [Layer(name="Layer-0")]
+        self.layers = [LayerModel(name="Layer-0")]
         self.current_layer_index = 0
         self.current_line = None
         self.zoom_factor = 1.0
@@ -197,11 +200,19 @@ class DrawingManager(QWidget):
                 self.current_layer_index = len(self.layers) - 1
             self.save_dxf()
 
+    def get_true_color(self, dxf_layer: ezdxf.sections.table.Layer):
+        if dxf_layer.has_dxf_attrib('true_color'):
+            true_color = dxf_layer.dxf.true_color
+            return true_color
+        else:
+            return 0x000000
+
     def load_dxf(self, file_path):
         self.layers = []
         doc = ezdxf.readfile(file_path)
-        for dxf_layer in doc.layers:
-            layer = Layer(name=dxf_layer.dxf.name, color=QColor(dxf_layer.color), width=1, visible=True)
+        doc_layers:LayerTable=doc.layers
+        for dxf_layer in doc_layers:
+            layer = LayerModel(name=dxf_layer.dxf.name, color=QColor(self.get_true_color(dxf_layer)), width=1, visible=True)
             self.layers.append(layer)
 
         for entity in doc.entities:
@@ -232,11 +243,12 @@ class DrawingManager(QWidget):
 
         doc = ezdxf.new()
         for index, layer in enumerate(self.layers):
-            doc.layers.add(
-                name=layer.name,
-                true_color=self.qcolor_to_dxf_color(layer.color),
-                lineweight=lwindex[layer.width]
-            )
+            if layer.name != '0' and layer.name != 'Defpoints':
+                doc.layers.add(
+                    name=layer.name,
+                    true_color=self.qcolor_to_dxf_color(layer.color),
+                    lineweight=lwindex[layer.width]
+                )
             for line in layer.lines:
                 doc.modelspace().add_line(
                     (line.start_point.x(), line.start_point.y()),
@@ -252,15 +264,18 @@ class DrawingManager(QWidget):
 
     def wheelEvent(self, event):
         mouse_pos = event.position().toPoint()
+        scene_pos = self.map_to_scene(mouse_pos)
+
         delta = event.angleDelta().y()
         if delta > 0:
             factor = 1.1
         else:
             factor = 0.9
 
-        old_zoom_factor = self.zoom_factor
         self.zoom_factor *= factor
-        self.offset = self.offset - mouse_pos + (mouse_pos / old_zoom_factor) * self.zoom_factor
+
+        new_scene_pos = self.map_to_view(scene_pos)
+        self.offset += mouse_pos - new_scene_pos
 
         self.update()
 
@@ -302,7 +317,7 @@ class DrawingManager(QWidget):
     def mouseMoveEvent(self, event):
         scene_pos = self.map_to_scene(event.pos())
         scene_pos = self.apply_mouse_input_modifiers(scene_pos)
-        self.snapped_pointer=scene_pos
+        self.snapped_pointer = scene_pos
         if self.current_line:
             end_point = scene_pos
             if event.modifiers() & Qt.ControlModifier:
@@ -359,14 +374,14 @@ class DrawingManager(QWidget):
         painter.drawLine(point.x() + size, point.y() - size, point.x() - size, point.y() + size)
 
     def draw_cursor(self, painter: QPainter, point: QPoint):
-        x=point.x()
-        y=point.y()
+        x = point.x()
+        y = point.y()
         pen = QPen(QColor(Qt.black), 1, Qt.SolidLine)
         painter.setPen(pen)
         size = 5
         painter.drawLine(x - 2 * size, y, x + 2 * size, y)
         painter.drawLine(x, y - 2 * size, x, y + 2 * size)
-        painter.drawRect(x - size, y - size, 2*size, 2*size)
+        painter.drawRect(x - size, y - size, 2 * size, 2 * size)
 
     def snap_to_angle(self, start_point, end_point):
         dx = end_point.x() - start_point.x()
@@ -497,7 +512,7 @@ class LayerManager(QDialog):
 
     def add_layer(self):
         new_layer_name = f"Layer-{len(self.canvas.layers)}"
-        new_layer = Layer(name=new_layer_name)
+        new_layer = LayerModel(name=new_layer_name)
         self.canvas.add_layer(new_layer)
         self.update_layer_list()
 
