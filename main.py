@@ -32,6 +32,14 @@ def round_to_nearest(value, base):
     return base * round(value / base)
 
 
+def floor_to_nearest(value, base):
+    return base * math.floor(value / base)
+
+
+def ceil_to_nearest(value, base):
+    return base * math.ceil(value / base)
+
+
 def distance(point1, point2):
     return math.sqrt((point1.x() - point2.x()) ** 2 + (point1.y() - point2.y()) ** 2)
 
@@ -222,7 +230,7 @@ class DrawingManager(QWidget):
         for dxf_layer in doc_layers:
             color = QColor(self.get_true_color(dxf_layer))
             width0 = dxf_layer.dxf.lineweight if dxf_layer.dxf.hasattr('lineweight') else 1
-            width = lwrindex[width0] if width0 >=0 else lwrindex[5]
+            width = lwrindex[width0] if width0 >= 0 else lwrindex[5]
             layer = LayerModel(name=dxf_layer.dxf.name, color=color, width=width,
                                visible=True)
             self.layers.append(layer)
@@ -304,10 +312,17 @@ class DrawingManager(QWidget):
         p = QPoint(pos.x(), pos.y())
         if self.flSnapPoints:
             nearest_point = find_nearest_point(self.get_all_points(), pos)
-            if nearest_point is not None and distance(nearest_point, pos) <= (self.snapDistance/self.zoom_factor):
+            if nearest_point is not None and distance(nearest_point, pos) <= (self.snapDistance / self.zoom_factor):
                 p = QPoint(nearest_point.x(), nearest_point.y())
         if self.flSnapGrid:
-            p = QPoint(round_to_nearest(pos.x(), self.gridSpacing.x()), round_to_nearest(pos.y(), self.gridSpacing.y()))
+            a0 = QPoint(floor_to_nearest(pos.x(), self.gridSpacing.x()),
+                        floor_to_nearest(pos.y(), self.gridSpacing.y()))
+            a1 = QPoint(ceil_to_nearest(pos.x(), self.gridSpacing.x()), floor_to_nearest(pos.y(), self.gridSpacing.y()))
+            a2 = QPoint(floor_to_nearest(pos.x(), self.gridSpacing.x()), ceil_to_nearest(pos.y(), self.gridSpacing.y()))
+            a3 = QPoint(ceil_to_nearest(pos.x(), self.gridSpacing.x()), ceil_to_nearest(pos.y(), self.gridSpacing.y()))
+            nearest_point = find_nearest_point([a0, a1, a2, a3], pos)
+            if nearest_point is not None and distance(nearest_point, pos) <= (self.snapDistance / self.zoom_factor):
+                p = QPoint(nearest_point.x(), nearest_point.y())
         self.model_point_snapped = QPoint(p.x(), p.y())
         return p
 
