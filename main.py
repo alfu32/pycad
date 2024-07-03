@@ -57,6 +57,90 @@ def find_nearest_point(point_list: List[QPoint], p: QPoint) -> QPoint:
     return nearest_point
 
 
+def qcolor_to_dxf_color(color):
+    r = color.red()
+    g = color.green()
+    b = color.blue()
+    return (r << 16) + (g << 8) + b
+
+
+def get_true_color(dxf_layer: ezdxf.sections.table.Layer):
+    if dxf_layer.has_dxf_attrib('true_color'):
+        true_color = dxf_layer.dxf.true_color
+        return true_color
+    else:
+        return 0x000000
+
+
+def sort_points_on_line(line, points):
+    def distance_to_start(p):
+        return math.hypot(p.x() - line.start_point.x(), p.y() - line.start_point.y())
+
+    return sorted(points, key=distance_to_start)
+
+
+def split_line_by_points(line, points):
+    segments = []
+    start = line.start_point
+    for point in points:
+        segments.append(Line(start, point, line.color, line.width))
+        start = point
+    segments.append(Line(start, line.end_point, line.color, line.width))
+    return segments
+
+
+def draw_cross(painter: QPainter, point: QPoint):
+    x = point.x()
+    y = point.y()
+    pen = QPen(QColor(Qt.red), 2, Qt.SolidLine)
+    painter.setPen(pen)
+    size = 4
+    painter.drawLine(x - size, y - size, x + size, y + size)
+    painter.drawLine(x + size, y - size, x - size, y + size)
+
+
+def draw_point(painter: QPainter, point: QPoint, color: int = Qt.red):
+    x = point.x()
+    y = point.y()
+    size = 1
+    pen = QPen(QColor(color), size, Qt.SolidLine)
+    painter.setPen(pen)
+    painter.drawRect(x - size, y- size, 2*size,2*size)
+
+
+def draw_rect(painter: QPainter, point: QPoint):
+    pen = QPen(QColor(Qt.blue), 1, Qt.SolidLine)
+    painter.setPen(pen)
+    color: QColor = QColor(0x0055ff)
+    size = 4
+    painter.fillRect(point.x() - size, point.y() - size, 2 * size, 2 * size, color)
+    painter.drawRect(point.x() - size, point.y() - size, 2 * size, 2 * size)
+
+
+def draw_cursor(painter: QPainter, point: QPoint):
+    x = point.x()
+    y = point.y()
+    pen = QPen(QColor(Qt.black), 1, Qt.SolidLine)
+    painter.setPen(pen)
+    size = 8
+    painter.drawLine(x - 2 * size, y, x + 2 * size, y)
+    painter.drawLine(x, y - 2 * size, x, y + 2 * size)
+    painter.drawRect(x - size / 2, y - size / 2, size, size)
+
+
+def snap_to_angle(start_point, end_point):
+    dx = end_point.x() - start_point.x()
+    dy = end_point.y() - start_point.y()
+    angle = math.atan2(dy, dx)
+    snap_angle = round(angle / (math.pi / 12)) * (math.pi / 12)
+    length = math.hypot(dx, dy)
+    snapped_end_point = QPoint(
+        start_point.x() + length * math.cos(snap_angle),
+        start_point.y() + length * math.sin(snap_angle)
+    )
+    return snapped_end_point
+
+
 class Line:
     def __init__(self, start_point, end_point, color, width):
         self.start_point = start_point
@@ -123,7 +207,7 @@ class LayerModel:
         self.width = width
         self.visible = visible
         self.lines = []
-        self.flAutoCut = True
+        self.flAutoCut = False
 
     def add_line(self, line):
         self.lines.append(line)
@@ -154,26 +238,11 @@ class LayerModel:
         new_lines = []
         for line_idx, intersect_points in intersection_groups.items():
             line = self.lines[line_idx]
-            sorted_points = self.sort_points_on_line(line, intersect_points)
-            new_lines.extend(self.split_line_by_points(line, sorted_points))
+            sorted_points = sort_points_on_line(line, intersect_points)
+            new_lines.extend(split_line_by_points(line, sorted_points))
 
         self.lines = [line for idx, line in enumerate(self.lines) if idx not in intersection_groups]
         self.lines.extend(new_lines)
-
-    def sort_points_on_line(self, line, points):
-        def distance_to_start(p):
-            return math.hypot(p.x() - line.start_point.x(), p.y() - line.start_point.y())
-
-        return sorted(points, key=distance_to_start)
-
-    def split_line_by_points(self, line, points):
-        segments = []
-        start = line.start_point
-        for point in points:
-            segments.append(Line(start, point, line.color, line.width))
-            start = point
-        segments.append(Line(start, line.end_point, line.color, line.width))
-        return segments
 
     def cleanup_duplicates(self):
         unique_lines = set(self.lines)
@@ -195,7 +264,7 @@ class DrawingManager(QWidget):
         self.offset = QPoint(0, 0)
         self.dxf_file = None
         self.flSnapGrid = True
-        self.gridSpacing = QPoint(10, 10)
+        self.gridSpacing = QPoint(25, 25)
         self.flSnapPoints = True
         self.snapDistance = 5
         self.model_point_snapped = QPoint(0, 0)
@@ -216,19 +285,12 @@ class DrawingManager(QWidget):
                 self.current_layer_index = len(self.layers) - 1
             self.save_dxf()
 
-    def get_true_color(self, dxf_layer: ezdxf.sections.table.Layer):
-        if dxf_layer.has_dxf_attrib('true_color'):
-            true_color = dxf_layer.dxf.true_color
-            return true_color
-        else:
-            return 0x000000
-
     def load_dxf(self, file_path):
         self.layers = []
         doc = ezdxf.readfile(file_path)
         doc_layers: LayerTable = doc.layers
         for dxf_layer in doc_layers:
-            color = QColor(self.get_true_color(dxf_layer))
+            color = QColor(get_true_color(dxf_layer))
             width0 = dxf_layer.dxf.lineweight if dxf_layer.dxf.hasattr('lineweight') else 1
             width = lwrindex[width0] if width0 >= 0 else lwrindex[5]
             layer = LayerModel(name=dxf_layer.dxf.name, color=color, width=width,
@@ -250,12 +312,6 @@ class DrawingManager(QWidget):
 
         self.current_layer_index = 0
 
-    def qcolor_to_dxf_color(self, color):
-        r = color.red()
-        g = color.green()
-        b = color.blue()
-        return (r << 16) + (g << 8) + b
-
     def save_dxf(self):
         if not self.dxf_file:
             timestamp = time.strftime("%Y%m%d-%H%M%S")
@@ -266,7 +322,7 @@ class DrawingManager(QWidget):
             if layer.name != '0' and layer.name != 'Defpoints':
                 doc.layers.add(
                     name=layer.name,
-                    true_color=self.qcolor_to_dxf_color(layer.color),
+                    true_color=qcolor_to_dxf_color(layer.color),
                     lineweight=lwindex[layer.width]
                 )
             for line in layer.lines:
@@ -275,7 +331,7 @@ class DrawingManager(QWidget):
                     (line.end_point.x(), line.end_point.y()),
                     dxfattribs={
                         'layer': layer.name,
-                        'color': self.qcolor_to_dxf_color(layer.color),
+                        'color': qcolor_to_dxf_color(layer.color),
                         'lineweight': lwindex[layer.width]
                     }
                 )
@@ -351,7 +407,7 @@ class DrawingManager(QWidget):
         if self.current_line:
             end_point = self.model_point_snapped
             if event.modifiers() & Qt.ControlModifier:
-                end_point = self.snap_to_angle(self.current_line.start_point, end_point)
+                end_point = snap_to_angle(self.current_line.start_point, end_point)
             self.current_line.end_point = end_point
             # Update line color and width to match the current layer
             layer = self.layers[self.current_layer_index]
@@ -364,7 +420,7 @@ class DrawingManager(QWidget):
         if self.current_line:
             end_point = self.model_point_snapped
             if event.modifiers() & Qt.ControlModifier:
-                end_point = self.snap_to_angle(self.current_line.start_point, end_point)
+                end_point = snap_to_angle(self.current_line.start_point, end_point)
             self.current_line.end_point = end_point
             self.layers[self.current_layer_index].add_line(self.current_line)
             self.current_line = None
@@ -372,19 +428,19 @@ class DrawingManager(QWidget):
         self.update()
 
     def paintEvent(self, event):
-        painter = QPainter(self)
+        painter: QPainter = QPainter(self)
 
         # Draw endpoint markers
         for layer in self.layers:
             if not layer.visible:
                 continue
             for line in layer.lines:
-                self.draw_rect(painter, self.map_to_view(line.start_point))
-                self.draw_rect(painter, self.map_to_view(line.end_point))
+                draw_rect(painter, self.map_to_view(line.start_point))
+                draw_rect(painter, self.map_to_view(line.end_point))
 
         if self.current_line:
-            self.draw_rect(painter, self.map_to_view(self.current_line.start_point))
-            self.draw_rect(painter, self.map_to_view(self.current_line.end_point))
+            draw_rect(painter, self.map_to_view(self.current_line.start_point))
+            draw_rect(painter, self.map_to_view(self.current_line.end_point))
 
         transform = QTransform()
         transform.translate(self.offset.x(), self.offset.y())
@@ -403,48 +459,11 @@ class DrawingManager(QWidget):
             painter.setPen(pen)
             painter.drawLine(self.current_line.start_point, self.current_line.end_point)
 
+        if self.flSnapGrid:
+            self.draw_local_grid(painter, self.screen_point_snapped)
         # Reset transformation to draw crosses in screen coordinates
         painter.setTransform(QTransform())
-        self.draw_cursor(painter, self.screen_point_snapped)
-
-    def draw_cross(self, painter: QPainter, point: QPoint):
-        x = point.x()
-        y = point.y()
-        pen = QPen(QColor(Qt.red), 2, Qt.SolidLine)
-        painter.setPen(pen)
-        size = 4
-        painter.drawLine(x - size, y - size, x + size, y + size)
-        painter.drawLine(x + size, y - size, x - size, y + size)
-
-    def draw_rect(self, painter: QPainter, point: QPoint):
-        pen = QPen(QColor(Qt.blue), 1, Qt.SolidLine)
-        painter.setPen(pen)
-        color: QColor = QColor(0x0055ff)
-        size = 4
-        painter.fillRect(point.x() - size, point.y() - size, 2 * size, 2 * size, color)
-        painter.drawRect(point.x() - size, point.y() - size, 2 * size, 2 * size)
-
-    def draw_cursor(self, painter: QPainter, point: QPoint):
-        x = point.x()
-        y = point.y()
-        pen = QPen(QColor(Qt.black), 1, Qt.SolidLine)
-        painter.setPen(pen)
-        size = 8
-        painter.drawLine(x - 2 * size, y, x + 2 * size, y)
-        painter.drawLine(x, y - 2 * size, x, y + 2 * size)
-        painter.drawRect(x - size / 2, y - size / 2, size, size)
-
-    def snap_to_angle(self, start_point, end_point):
-        dx = end_point.x() - start_point.x()
-        dy = end_point.y() - start_point.y()
-        angle = math.atan2(dy, dx)
-        snap_angle = round(angle / (math.pi / 12)) * (math.pi / 12)
-        length = math.hypot(dx, dy)
-        snapped_end_point = QPoint(
-            start_point.x() + length * math.cos(snap_angle),
-            start_point.y() + length * math.sin(snap_angle)
-        )
-        return snapped_end_point
+        draw_cursor(painter, self.screen_point_snapped)
 
     def get_all_points(self):
         points = []
@@ -453,6 +472,27 @@ class DrawingManager(QWidget):
                 points.append(line.start_point)
                 points.append(line.end_point)
         return points
+
+    def get_all_lines(self):
+        lines = []
+        for layer in self.layers:
+            for line in layer.lines:
+                lines.append(line)
+        return lines
+
+    def draw_local_grid(self, painter: QPainter, center: QPoint):
+        dx = self.gridSpacing.x()
+        dy = self.gridSpacing.y()
+        NX = dx * 40
+        NY = dy * 40
+        cx = round(center.x() / NX) * NX
+        cy = round(center.y() / NY) * NY
+        for ix in range(26):
+            for iy in range(26):
+                draw_point(painter, QPoint(cx + ix * dx, cy + iy * dy), Qt.black)
+                draw_point(painter, QPoint(cx + ix * dx, cy - iy * dy), Qt.black)
+                draw_point(painter, QPoint(cx - ix * dx, cy + iy * dy), Qt.black)
+                draw_point(painter, QPoint(cx - ix * dx, cy - iy * dy), Qt.black)
 
 
 class LayerItem(QWidget):
@@ -576,6 +616,9 @@ class LayerManager(QDialog):
 class MainWindow(QMainWindow):
     def __init__(self, file_path=None):
         super().__init__()
+        self.grid_snap_x: QSpinBox = None
+        self.grid_snap_y: QSpinBox = None
+        self.snap_distance: QSpinBox = None
         self.setWindowTitle("PyCAD 14")
         self.setGeometry(100, 100, 800, 600)  # Initial window size
         self.drawing_manager = DrawingManager()
@@ -591,27 +634,73 @@ class MainWindow(QMainWindow):
         self.layer_manager.show()  # Show the layer manager as a non-blocking modal
         self.init_ui()
 
-    def on_grid_snap_changed(self):
-        self.drawing_manager.flSnapGrid = not self.drawing_manager.flSnapGrid
+    def on_grid_snap_changed(self, checked):
+        self.drawing_manager.flSnapGrid = bool(checked)
         self.statusBar().showMessage(f"flSnapGrid is {self.drawing_manager.flSnapGrid}")
 
-    def on_vertex_snap_changed(self):
-        self.drawing_manager.flSnapPoints = not self.drawing_manager.flSnapPoints
+    def on_vertex_snap_changed(self, checked):
+        self.drawing_manager.flSnapPoints = bool(checked)
         self.statusBar().showMessage(f"flSnapPoints is {self.drawing_manager.flSnapPoints}")
+
+    def on_grid_spacing_x_changed(self, value):
+        self.drawing_manager.gridSpacing.setX(value)
+        self.statusBar().showMessage(f"snap_grid.x is {self.drawing_manager.gridSpacing}")
+
+    def on_grid_spacing_y_changed(self, value):
+        self.drawing_manager.gridSpacing.setY(value)
+        self.statusBar().showMessage(f"snap_grid.y is {self.drawing_manager.gridSpacing}")
+
+    def on_grid_snap_distance_changed(self, value):
+        self.drawing_manager.snapDistance = value
+        self.statusBar().showMessage(f"snap_grid.y is {self.drawing_manager.snapDistance}")
 
     def init_ui(self):
         main_layout = QVBoxLayout()
 
         # Add buttons and checkboxes
         control_layout = QHBoxLayout()
+
         grid_snap_checkbox = QCheckBox("Grid Snap")
         grid_snap_checkbox.setChecked(True)
         grid_snap_checkbox.stateChanged.connect(self.on_grid_snap_changed)
+        control_layout.addWidget(grid_snap_checkbox)
+
+        grid_snap_x_label = QLabel()
+        grid_snap_x_label.setText("X")
+        control_layout.addWidget(grid_snap_x_label)
+
+        self.grid_snap_x = QSpinBox()
+        self.grid_snap_x.setValue(self.drawing_manager.gridSpacing.x())
+        self.grid_snap_x.valueChanged.connect(self.on_grid_spacing_x_changed)
+        control_layout.addWidget(self.grid_snap_x)
+
+        grid_snap_y_label = QLabel()
+        grid_snap_y_label.setText("Y")
+        control_layout.addWidget(grid_snap_y_label)
+
+        self.grid_snap_y = QSpinBox()
+        self.grid_snap_y.setValue(self.drawing_manager.gridSpacing.x())
+        self.grid_snap_y.valueChanged.connect(self.on_grid_spacing_y_changed)
+        control_layout.addWidget(self.grid_snap_y)
+
+        grid_snap_checkbox = QCheckBox("Grid Snap")
+        grid_snap_checkbox.setChecked(True)
+        grid_snap_checkbox.stateChanged.connect(self.on_grid_snap_changed)
+        control_layout.addWidget(grid_snap_checkbox)
+
         vertex_snap_checkbox = QCheckBox("Vertex Snap")
         vertex_snap_checkbox.setChecked(True)
         vertex_snap_checkbox.stateChanged.connect(self.on_vertex_snap_changed)
-        control_layout.addWidget(grid_snap_checkbox)
         control_layout.addWidget(vertex_snap_checkbox)
+
+        snap_distance_label = QLabel()
+        snap_distance_label.setText("snap distance")
+        control_layout.addWidget(snap_distance_label)
+
+        self.snap_distance = QSpinBox()
+        self.snap_distance.setValue(self.drawing_manager.snapDistance)
+        self.snap_distance.valueChanged.connect(self.on_grid_snap_distance_changed)
+        control_layout.addWidget(self.snap_distance)
 
         main_layout.addLayout(control_layout)
         main_layout.addWidget(self.drawing_manager)
