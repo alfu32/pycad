@@ -135,14 +135,14 @@ def draw_rect(painter: QPainter, point: QPoint):
     painter.drawRect(point.x() - size, point.y() - size, 2 * size, 2 * size)
 
 
-def draw_cursor(painter: QPainter, point: QPoint, size:int):
+def draw_cursor(painter: QPainter, point: QPoint, size: int):
     x = point.x()
     y = point.y()
     pen = QPen(QColor(Qt.black), 1, Qt.SolidLine)
     painter.setPen(pen)
     painter.drawLine(x - 3 * size, y, x + 3 * size, y)
     painter.drawLine(x, y - 3 * size, x, y + 3 * size)
-    painter.drawRect(x - size, y - size, 2*size, 2*size)
+    painter.drawRect(x - size, y - size, 2 * size, 2 * size)
     # painter.drawArc(x - size, y - size, 2*size, 2*size, 1, math.pi)
 
 
@@ -291,6 +291,10 @@ class DrawingManager(QWidget):
         self.model_point_raw = QPoint(0, 0)
         self.screen_point_raw = QPoint(0, 0)
         self.screen_point_snapped = QPoint(0, 0)
+        self.mode = "line"  # Default mode
+
+    def set_mode(self, mode):
+        self.mode = mode
 
     def set_current_layer(self, index):
         self.current_layer_index = index
@@ -652,6 +656,11 @@ class MainWindow(QMainWindow):
         self.layer_manager.changed.connect(self.on_layers_changed)
         self.layer_manager.closed.connect(self.on_layer_manager_closed)
         self.layer_manager.show()  # Show the layer manager as a non-blocking modal
+
+        self.line_mode_button: QPushButton = None
+        self.dimension_mode_button: QPushButton = None
+        self.text_mode_button: QPushButton = None
+
         self.init_ui()
         self.load_dxf(file)
         self.setWindowTitle(f"PyCAD 14 - {self.dxf_file}")
@@ -735,8 +744,21 @@ class MainWindow(QMainWindow):
         self.layout_man_button.setEnabled(False)
         control_layout.addWidget(self.layout_man_button)
 
-        # for ii in range(0, control_layout.count()):
-        #     control_layout.itemAt(ii).widget().setSizePolicy(size_policy)
+        self.line_mode_button = QPushButton("Line")
+        self.line_mode_button.setCheckable(True)
+        self.line_mode_button.setChecked(True)
+        self.line_mode_button.clicked.connect(self.set_line_mode)
+        control_layout.addWidget(self.line_mode_button)
+
+        self.dimension_mode_button = QPushButton("Dimension")
+        self.dimension_mode_button.setCheckable(True)
+        self.dimension_mode_button.clicked.connect(self.set_dimension_mode)
+        control_layout.addWidget(self.dimension_mode_button)
+
+        self.text_mode_button = QPushButton("Text")
+        self.text_mode_button.setCheckable(True)
+        self.text_mode_button.clicked.connect(self.set_text_mode)
+        control_layout.addWidget(self.text_mode_button)
 
         main_layout.addLayout(control_layout)
         main_layout.addWidget(self.drawing_manager)
@@ -750,6 +772,27 @@ class MainWindow(QMainWindow):
         self.layer_manager.update_layer_list()
         self.layer_manager.layer_list.setCurrentRow(0)
         self.drawing_manager.set_current_layer(0)
+
+    def set_line_mode(self):
+        self.statusBar().showMessage("Mode: line")
+        self.drawing_manager.set_mode("line")
+        self.line_mode_button.setChecked(True)
+        self.dimension_mode_button.setChecked(False)
+        self.text_mode_button.setChecked(False)
+
+    def set_dimension_mode(self):
+        self.statusBar().showMessage("Mode: dimension")
+        self.drawing_manager.set_mode("dimension")
+        self.line_mode_button.setChecked(False)
+        self.dimension_mode_button.setChecked(True)
+        self.text_mode_button.setChecked(False)
+
+    def set_text_mode(self):
+        self.statusBar().showMessage("Mode: text")
+        self.drawing_manager.set_mode("text")
+        self.line_mode_button.setChecked(False)
+        self.dimension_mode_button.setChecked(False)
+        self.text_mode_button.setChecked(True)
 
     def show_layers(self):
 
