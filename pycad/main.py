@@ -1,3 +1,4 @@
+import os
 import sys
 import math
 import time
@@ -7,10 +8,10 @@ import ezdxf
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QPushButton,
     QColorDialog, QSpinBox, QListWidget, QListWidgetItem,
-    QLineEdit, QCheckBox, QHBoxLayout, QVBoxLayout, QDialog, QRadioButton, QStyle, QLabel,
+    QLineEdit, QCheckBox, QHBoxLayout, QVBoxLayout, QDialog, QRadioButton, QStyle, QLabel, QComboBox,
 )
 from PySide6.QtGui import QPainter, QPen, QColor, QTransform, QMouseEvent
-from PySide6.QtCore import Qt, QPoint
+from PySide6.QtCore import Qt, QPoint, Signal
 from ezdxf.sections.table import (
     LayerTable, Layer
 )
@@ -25,6 +26,20 @@ lwrindex = {0: 0, 5: 1, 9: 2, 13: 3, 15: 4, 18: 5, 20: 5, 25: 6,
             30: 7, 35: 8, 40: 9, 50: 10, 53: 11, 60: 12, 70: 13, 80: 13,
             90: 14, 100: 15, 106: 16, 120: 17, 140: 18, 158: 19, 200: 20,
             }
+linetypes = {
+    "Continuous": [],
+    "Dashed": [10, 10],  # 10 units on, 10 units off
+    "DashedLarge": [20, 10],  # 10 units on, 10 units off
+    "Dotted": [1, 10],  # 1 unit on, 10 units off
+    "DottedLarge": [1, 20],  # 1 unit on, 10 units off
+    "DashDot": [10, 5, 1, 5],  # 10 units on, 5 units off, 1 unit on, 5 units off
+    "DashDotLarge": [20, 10, 1, 10],  # 10 units on, 5 units off, 1 unit on, 5 units off
+    "DashDotDot": [10, 5, 1, 5, 1, 5],  # 10 units on, 5 units off, 1 unit on, 5 units off, 1 unit on, 5 units off
+    "DashDotDotLarge": [20, 10, 1, 10, 1, 10]
+    # 10 units on, 5 units off, 1 unit on, 5 units off, 1 unit on, 5 units off
+}
+
+dxf_app_id = "e8ec01b43m15-PYCAD-1.0.0"
 
 
 def round_to_nearest(value, base):
@@ -107,7 +122,7 @@ def draw_point(painter: QPainter, point: QPoint, color: int = Qt.red):
     size = 1
     pen = QPen(QColor(color), size, Qt.SolidLine)
     painter.setPen(pen)
-    painter.drawRect(x - size, y- size, 2*size,2*size)
+    painter.drawRect(x - size, y - size, 2 * size, 2 * size)
 
 
 def draw_rect(painter: QPainter, point: QPoint):
@@ -204,6 +219,7 @@ class Line:
 
 class LayerModel:
     def __init__(self, name="Layer", color=QColor(Qt.black), width=2, visible=True):
+        self.linetype = "Continuous"
         self.name = name
         self.color = color
         self.width = width
@@ -255,16 +271,17 @@ class LayerModel:
 
 
 class DrawingManager(QWidget):
+    changed = Signal(object)  # Define a custom signal with a generic object type
+
     def __init__(self):
         super().__init__()
         self.setMouseTracking(True)
         self.setCursor(Qt.BlankCursor)
-        self.layers = [LayerModel(name="Layer-0")]
+        self.layers = [LayerModel(name="0")]
         self.current_layer_index = 0
         self.current_line = None
         self.zoom_factor = 1.0
         self.offset = QPoint(0, 0)
-        self.dxf_file = None
         self.flSnapGrid = True
         self.gridSpacing = QPoint(25, 25)
         self.flSnapPoints = True
@@ -276,69 +293,18 @@ class DrawingManager(QWidget):
 
     def set_current_layer(self, index):
         self.current_layer_index = index
+        self.changed.emit(self.layers)
 
     def add_layer(self, layer):
         self.layers.append(layer)
+        self.changed.emit(self.layers)
 
     def remove_layer(self, index):
         if len(self.layers) > 1:
             del self.layers[index]
             if self.current_layer_index >= len(self.layers):
                 self.current_layer_index = len(self.layers) - 1
-            self.save_dxf()
-
-    def load_dxf(self, file_path):
-        self.layers = []
-        doc = ezdxf.readfile(file_path)
-        doc_layers: LayerTable = doc.layers
-        for dxf_layer in doc_layers:
-            color = QColor(get_true_color(dxf_layer))
-            width0 = dxf_layer.dxf.lineweight if dxf_layer.dxf.hasattr('lineweight') else 1
-            width = lwrindex[width0] if width0 >= 0 else lwrindex[5]
-            layer = LayerModel(name=dxf_layer.dxf.name, color=color, width=width,
-                               visible=True)
-            self.layers.append(layer)
-
-        for entity in doc.entities:
-            if entity.dxftype() == 'LINE':
-                start_point = QPoint(entity.dxf.start.x, entity.dxf.start.y)
-                end_point = QPoint(entity.dxf.end.x, entity.dxf.end.y)
-                color = QColor(entity.dxf.color) if entity.dxf.hasattr('color') else QColor(Qt.black)
-                width = entity.dxf.lineweight if entity.dxf.hasattr('lineweight') else 1
-                line = Line(start_point, end_point, color, width)
-                layer_name = entity.dxf.layer
-                for layer in self.layers:
-                    if layer.name == layer_name:
-                        layer.add_line(line)
-                        break
-
-        self.current_layer_index = 0
-
-    def save_dxf(self):
-        if not self.dxf_file:
-            timestamp = time.strftime("%Y%m%d-%H%M%S")
-            self.dxf_file = f"drawing_{timestamp}.dxf"
-
-        doc = ezdxf.new()
-        for index, layer in enumerate(self.layers):
-            if layer.name != '0' and layer.name != 'Defpoints':
-                doc.layers.add(
-                    name=layer.name,
-                    true_color=qcolor_to_dxf_color(layer.color),
-                    lineweight=lwindex[layer.width]
-                )
-            for line in layer.lines:
-                doc.modelspace().add_line(
-                    (line.start_point.x(), line.start_point.y()),
-                    (line.end_point.x(), line.end_point.y()),
-                    dxfattribs={
-                        'layer': layer.name,
-                        'color': qcolor_to_dxf_color(layer.color),
-                        'lineweight': lwindex[layer.width]
-                    }
-                )
-
-        doc.saveas(self.dxf_file)
+            self.changed.emit(self.layers)
 
     def wheelEvent(self, event):
         mouse_pos = event.position().toPoint()
@@ -401,8 +367,7 @@ class DrawingManager(QWidget):
                 if line.contains_point(self.model_point_raw):
                     clayer.lines.remove(line)
                     self.update()
-                    self.save_dxf()
-                    return
+        self.changed.emit(self.layers)
 
     def mouseMoveEvent(self, event):
         self.update_mouse_positions(event)
@@ -426,7 +391,7 @@ class DrawingManager(QWidget):
             self.current_line.end_point = end_point
             self.layers[self.current_layer_index].add_line(self.current_line)
             self.current_line = None
-            self.save_dxf()
+        self.changed.emit(self.layers)
         self.update()
 
     def paintEvent(self, event):
@@ -454,15 +419,19 @@ class DrawingManager(QWidget):
                 continue
             for line in layer.lines:
                 pen = QPen(layer.color, layer.width / self.zoom_factor, Qt.SolidLine)
+                pen.setDashPattern(linetypes[layer.linetype])
                 painter.setPen(pen)
                 painter.drawLine(line.start_point, line.end_point)
         if self.current_line:
+            layer = self.current_layer()
             pen = QPen(self.current_layer().color, self.current_layer().width / self.zoom_factor, Qt.SolidLine)
+
+            pen.setDashPattern(linetypes[layer.linetype])
             painter.setPen(pen)
             painter.drawLine(self.current_line.start_point, self.current_line.end_point)
 
         if self.flSnapGrid:
-            self.draw_local_grid(painter, self.screen_point_snapped)
+            self.draw_local_grid(painter, self.model_point_snapped)
         # Reset transformation to draw crosses in screen coordinates
         painter.setTransform(QTransform())
         draw_cursor(painter, self.screen_point_snapped)
@@ -498,6 +467,8 @@ class DrawingManager(QWidget):
 
 
 class LayerItem(QWidget):
+    changed = Signal(object)  # Define a custom signal with a generic object type
+
     def __init__(self, layer, parent=None):
         super().__init__(parent)
         self.layer = layer
@@ -521,7 +492,7 @@ class LayerItem(QWidget):
 
         self.color_button = QPushButton()
         self.color_button.setStyleSheet(f"background-color: {self.layer.color.name()}")
-        self.color_button.clicked.connect(self.select_color)
+        self.color_button.clicked.connect(self.on_select_color)
         layout.addWidget(self.color_button)
 
         self.visibility_label = QLabel()
@@ -533,14 +504,22 @@ class LayerItem(QWidget):
         self.visibility_checkbox.stateChanged.connect(self.on_visibility_changed)
         layout.addWidget(self.visibility_checkbox)
 
-        self.visibility_label = QLabel()
-        self.visibility_label.setText("auto-cut")
-        layout.addWidget(self.visibility_label)
+        self.autocut_label = QLabel()
+        self.autocut_label.setText("auto-cut")
+        layout.addWidget(self.autocut_label)
 
         self.autocut_checkbox = QCheckBox()
-        self.autocut_checkbox.setChecked(self.layer.visible)
+        self.autocut_checkbox.setChecked(self.layer.flAutoCut)
         self.autocut_checkbox.stateChanged.connect(self.on_autocut_changed)
         layout.addWidget(self.autocut_checkbox)
+
+        # Add linetype combo box
+        self.linetype_combo = QComboBox()
+        self.linetype_combo.addItems(linetypes.keys())
+        self.linetype_combo.setCurrentText(self.layer.linetype)
+        self.linetype_combo.currentIndexChanged.connect(self.on_linetype_changed)
+        # layout.addWidget(QLabel("Linetype:"))
+        layout.addWidget(self.linetype_combo)
 
         self.remove_button = QPushButton("Remove")
         self.remove_button.clicked.connect(self.on_remove_clicked)
@@ -548,35 +527,53 @@ class LayerItem(QWidget):
 
         self.setLayout(layout)
 
+    def emit_changed(self):
+        self.changed.emit(self.layer)  # Emit the changed signal with the layer data model
+        # QApplication.processEvents()  # Process any pending events
+
     def on_radio_button_toggled(self, checked):
         if checked:
             index = self.parent.canvas.layers.index(self.layer)
             self.parent.canvas.set_current_layer(index)
             self.parent.update_layer_list()
+        self.emit_changed()
 
     def on_name_changed(self, text):
         self.layer.name = text
+        self.emit_changed()
 
     def on_width_changed(self, value):
         self.layer.width = value
+        self.emit_changed()
 
-    def select_color(self):
+    def on_select_color(self):
         color = QColorDialog.getColor(self.layer.color, self)
         if color.isValid():
             self.layer.color = color
             self.color_button.setStyleSheet(f"background-color: {self.layer.color.name()}")
+            self.emit_changed()
 
     def on_visibility_changed(self, state):
         self.layer.visible = bool(state)
+        self.emit_changed()
 
     def on_autocut_changed(self, state):
         self.layer.flAutoCut = bool(state)
+        self.emit_changed()
+
+    def on_linetype_changed(self, index):
+        linetype = self.linetype_combo.currentText()
+        self.layer.linetype = linetype
+        self.emit_changed()
 
     def on_remove_clicked(self):
         self.parent.remove_layer(self.layer)
+        self.emit_changed()
 
 
 class LayerManager(QDialog):
+    changed = Signal(object)  # Define a custom signal with a generic object type
+
     def __init__(self, canvas, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Layer Manager")
@@ -594,11 +591,16 @@ class LayerManager(QDialog):
         self.setLayout(layout)
         self.update_layer_list()
 
+    def emit_change(self):
+        self.changed.emit(self.layer_list)
+        # QApplication.processEvents()
+
     def update_layer_list(self):
         self.layer_list.clear()
         for i, layer in enumerate(self.canvas.layers):
             item = QListWidgetItem()
             widget = LayerItem(layer, self)
+            widget.changed.connect(self.on_layer_changed)
             item.setSizeHint(widget.sizeHint())
             self.layer_list.addItem(item)
             self.layer_list.setItemWidget(item, widget)
@@ -608,33 +610,44 @@ class LayerManager(QDialog):
         new_layer = LayerModel(name=new_layer_name)
         self.canvas.add_layer(new_layer)
         self.update_layer_list()
+        # print(f"add_layer {new_layer.name}", flush=True)
+        self.emit_change()
 
     def remove_layer(self, layer):
         index = self.canvas.layers.index(layer)
         self.canvas.remove_layer(index)
         self.update_layer_list()
+        # print(f"remove_layer {layer.name}", flush=True)
+        self.emit_change()
+
+    def on_layer_changed(self, layer):
+        # print(f"child layer changed {layer.name}", flush=True)
+        # Handle the layer data change here
+        self.emit_change()
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, file_path=None):
+    def __init__(self, file: str, temp: str):
         super().__init__()
+        self.dxf_file = file
+        self.temp_file = temp
         self.grid_snap_x: QSpinBox = None
         self.grid_snap_y: QSpinBox = None
         self.snap_distance: QSpinBox = None
         self.setGeometry(100, 100, 800, 600)  # Initial window size
         self.drawing_manager = DrawingManager()
         self.drawing_manager.setStyleSheet("background-color: black;")
-        if file_path:
-            self.drawing_manager.load_dxf(file_path)
-            self.drawing_manager.dxf_file = file_path
-        self.setWindowTitle(f"PyCAD 14 - {self.drawing_manager.dxf_file}")
+        self.drawing_manager.changed.connect(self.on_model_changed)
         self.layer_manager = LayerManager(self.drawing_manager)
         self.layer_manager.setMaximumWidth(720)
         self.layer_manager.setMinimumWidth(640)
         self.layer_manager.setMaximumHeight(720)
         self.layer_manager.setMinimumHeight(480)
+        self.layer_manager.changed.connect(self.on_layers_changed)
         self.layer_manager.show()  # Show the layer manager as a non-blocking modal
         self.init_ui()
+        self.load_dxf(file)
+        self.setWindowTitle(f"PyCAD 14 - {self.dxf_file}")
 
     def on_grid_snap_changed(self, checked):
         self.drawing_manager.flSnapGrid = bool(checked)
@@ -655,6 +668,16 @@ class MainWindow(QMainWindow):
     def on_grid_snap_distance_changed(self, value):
         self.drawing_manager.snapDistance = value
         self.statusBar().showMessage(f"snap_grid.y is {self.drawing_manager.snapDistance}")
+
+    def on_layers_changed(self, layers):
+        # print("layers changed", flush=True)
+        # print(f"{layers}", flush=True)
+        self.save_dxf(self.temp_file)
+
+    def on_model_changed(self, model):
+        # print("model changed", flush=True)
+        # print(f"{model}", flush=True)
+        self.save_dxf(self.temp_file)
 
     def init_ui(self):
         main_layout = QVBoxLayout()
@@ -718,13 +741,109 @@ class MainWindow(QMainWindow):
         self.drawing_manager.set_current_layer(0)
 
     def closeEvent(self, event):
+        self.save_dxf(self.dxf_file)
         self.layer_manager.close()
         event.accept()
+        os.unlink(self.temp_file)
+
+    def load_dxf(self, filename):
+        self.drawing_manager.layers = []
+        self.layer_manager.layers = []
+        doc = ezdxf.readfile(filename)
+        doc_layers: LayerTable = doc.layers
+        for dxf_layer in doc_layers:
+            color = QColor(get_true_color(dxf_layer))
+            width0 = dxf_layer.dxf.lineweight if dxf_layer.dxf.hasattr('lineweight') else 1
+            width = lwrindex[width0] if width0 >= 0 else lwrindex[5]
+            linetype = dxf_layer.dxf.get('linetype', 'Continuous')
+            # print(f"layer {dxf_layer.dxf.name} has linetype {linetype}", flush=True)
+
+            layer = LayerModel(name=dxf_layer.dxf.name, color=color, width=width,
+                               visible=True)
+            layer.linetype = dxf_layer.dxf.get('linetype', 'Continuous')
+            # Read XDATA
+            if dxf_layer.has_xdata(dxf_app_id):
+                xdata = dxf_layer.get_xdata(dxf_app_id)
+                for code, value in xdata:
+                    if code == 1000 and value == "autocut":
+                        # print(f"Layer {layer.name} has autocut set to: {value}", flush=True)
+                        pass
+                    if code == 1070:
+                        # print(f"Layer {layer.name} integer value to: {value}", flush=True)
+                        layer.flAutoCut = True if value == 1 else False
+                    else:
+                        layer.flAutoCut = False
+
+            self.layer_manager.layers.append(layer)
+            self.drawing_manager.layers.append(layer)
+
+        for entity in doc.entities:
+            if entity.dxftype() == 'LINE':
+                start_point = QPoint(entity.dxf.start.x, entity.dxf.start.y)
+                end_point = QPoint(entity.dxf.end.x, entity.dxf.end.y)
+                color = QColor(entity.dxf.color) if entity.dxf.hasattr('color') else QColor(Qt.black)
+                width = entity.dxf.lineweight if entity.dxf.hasattr('lineweight') else 1
+                line = Line(start_point, end_point, color, width)
+                layer_name = entity.dxf.layer
+                for layer in self.drawing_manager.layers:
+                    if layer.name == layer_name:
+                        layer.add_line(line)
+                        break
+
+        self.layer_manager.current_layer_index = 0
+        self.drawing_manager.update()
+        self.layer_manager.update_layer_list()
+
+    def save_dxf(self,filename):
+
+        doc = ezdxf.new()
+
+        if not doc.appids.has_entry(dxf_app_id):
+            doc.appids.new(dxf_app_id)
+
+        for linetype in linetypes:
+            if linetype != "Continuous":
+                if not doc.linetypes.has_entry(linetype):
+                    doc.linetypes.new(linetype, dxfattribs={'description': linetype, 'pattern': linetypes[linetype]})
+
+        for index, layer in enumerate(self.drawing_manager.layers):
+            if layer.name != '0' and layer.name != 'Defpoints':
+                dxf_layer = doc.layers.new(
+                    name=layer.name,
+                    dxfattribs={
+                        "true_color": qcolor_to_dxf_color(layer.color),
+                        "lineweight": lwindex[layer.width],
+                        "linetype": layer.linetype,
+                    }
+                )
+
+                # Add XDATA to the layer
+                xdata = [
+                    (1001, dxf_app_id),
+                    (1000, "autocut"),
+                    (1070, 1 if layer.flAutoCut else 0),
+                ]
+                dxf_layer.set_xdata(dxf_app_id, xdata)
+            for line in layer.lines:
+                doc.modelspace().add_line(
+                    (line.start_point.x(), line.start_point.y()),
+                    (line.end_point.x(), line.end_point.y()),
+                    dxfattribs={
+                        'layer': layer.name,
+                        'color': qcolor_to_dxf_color(layer.color),
+                        'lineweight': lwindex[layer.width]
+                    }
+                )
+
+        doc.saveas(filename)
 
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    file_path = sys.argv[1] if len(sys.argv) > 1 else None
-    window = MainWindow(file_path)
+    timestamp = time.strftime("%Y%m%d-%H%M%S")
+    default_file = f"drawing_{timestamp}.dxf"
+    file_path = sys.argv[1] if len(sys.argv) > 1 else default_file
+    temp_file = f"temp_{timestamp}_{file_path}"
+    window = MainWindow(file_path, temp_file)
     window.show()
     sys.exit(app.exec())
