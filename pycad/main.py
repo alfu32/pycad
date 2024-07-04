@@ -135,15 +135,15 @@ def draw_rect(painter: QPainter, point: QPoint):
     painter.drawRect(point.x() - size, point.y() - size, 2 * size, 2 * size)
 
 
-def draw_cursor(painter: QPainter, point: QPoint):
+def draw_cursor(painter: QPainter, point: QPoint, size:int):
     x = point.x()
     y = point.y()
     pen = QPen(QColor(Qt.black), 1, Qt.SolidLine)
     painter.setPen(pen)
-    size = 8
-    painter.drawLine(x - 2 * size, y, x + 2 * size, y)
-    painter.drawLine(x, y - 2 * size, x, y + 2 * size)
-    painter.drawRect(x - size / 2, y - size / 2, size, size)
+    painter.drawLine(x - 3 * size, y, x + 3 * size, y)
+    painter.drawLine(x, y - 3 * size, x, y + 3 * size)
+    painter.drawRect(x - size, y - size, 2*size, 2*size)
+    # painter.drawArc(x - size, y - size, 2*size, 2*size, 1, math.pi)
 
 
 def snap_to_angle(start_point, end_point):
@@ -432,10 +432,10 @@ class DrawingManager(QWidget):
             painter.drawLine(self.current_line.start_point, self.current_line.end_point)
 
         if self.flSnapGrid:
-            self.draw_local_grid(painter, self.model_point_snapped)
+            self.draw_local_grid(painter, self.model_point_snapped, 0x8888887f)
         # Reset transformation to draw crosses in screen coordinates
         painter.setTransform(QTransform())
-        draw_cursor(painter, self.screen_point_snapped)
+        draw_cursor(painter, self.screen_point_snapped, self.snapDistance)
 
     def get_all_points(self):
         points = []
@@ -452,7 +452,7 @@ class DrawingManager(QWidget):
                 lines.append(line)
         return lines
 
-    def draw_local_grid(self, painter: QPainter, center: QPoint):
+    def draw_local_grid(self, painter: QPainter, center: QPoint, color: int):
         dx = self.gridSpacing.x()
         dy = self.gridSpacing.y()
         NX = dx * 40
@@ -461,10 +461,10 @@ class DrawingManager(QWidget):
         cy = round(center.y() / NY) * NY
         for ix in range(26):
             for iy in range(26):
-                draw_point(painter, QPoint(cx + ix * dx, cy + iy * dy), 0x555555)
-                draw_point(painter, QPoint(cx + ix * dx, cy - iy * dy), 0x555555)
-                draw_point(painter, QPoint(cx - ix * dx, cy + iy * dy), 0x555555)
-                draw_point(painter, QPoint(cx - ix * dx, cy - iy * dy), 0x555555)
+                draw_point(painter, QPoint(cx + ix * dx, cy + iy * dy), color)
+                draw_point(painter, QPoint(cx + ix * dx, cy - iy * dy), color)
+                draw_point(painter, QPoint(cx - ix * dx, cy + iy * dy), color)
+                draw_point(painter, QPoint(cx - ix * dx, cy - iy * dy), color)
 
 
 class LayerItem(QWidget):

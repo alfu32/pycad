@@ -493,7 +493,7 @@ $SKPOLY
   9
 $TDCREATE
  40
-2460496.203900463
+2460496.21724537
   9
 $TDUCREATE
  40
@@ -501,7 +501,7 @@ $TDUCREATE
   9
 $TDUPDATE
  40
-2460496.203900463
+2460496.21724537
   9
 $TDUUPDATE
  40
@@ -933,11 +933,11 @@ $PSTYLEMODE
   9
 $FINGERPRINTGUID
   2
-{DFBDEEF6-A274-4086-B64D-BC792A42F2C2}
+{A252F64C-3B88-4EB6-8D77-6141A2984ADD}
   9
 $VERSIONGUID
   2
-{55608797-60A8-4018-944B-95EB8D4012CC}
+{5B5DF342-9F43-42E0-92A9-1B570FC5E29F}
   9
 $EXTNAMES
 290
@@ -2009,7 +2009,7 @@ above
   6
 DottedLarge
 370
-13
+9
 390
 13
 347
@@ -2073,7 +2073,7 @@ dims
   6
 Continuous
 370
-9
+5
 390
 13
 347
@@ -2105,7 +2105,7 @@ annotations
   6
 Continuous
 370
-9
+5
 390
 13
 347
@@ -2775,32 +2775,6 @@ cutouts
 100
 AcDbLine
  10
-1025.0
- 20
--175.0
- 30
-0.0
- 11
-1025.0
- 21
--350.0
- 31
-0.0
-  0
-LINE
-  5
-44
-330
-17
-100
-AcDbEntity
-  8
-cutouts
-370
-18
-100
-AcDbLine
- 10
 900.0
  20
 190.0
@@ -2815,7 +2789,7 @@ AcDbLine
   0
 LINE
   5
-45
+44
 330
 17
 100
@@ -2841,7 +2815,7 @@ AcDbLine
   0
 LINE
   5
-46
+45
 330
 17
 100
@@ -2867,7 +2841,7 @@ AcDbLine
   0
 LINE
   5
-47
+46
 330
 17
 100
@@ -2893,7 +2867,7 @@ AcDbLine
   0
 LINE
   5
-48
+47
 330
 17
 100
@@ -2919,7 +2893,7 @@ AcDbLine
   0
 LINE
   5
-49
+48
 330
 17
 100
@@ -2945,7 +2919,7 @@ AcDbLine
   0
 LINE
   5
-4A
+49
 330
 17
 100
@@ -2971,7 +2945,7 @@ AcDbLine
   0
 LINE
   5
-4B
+4A
 330
 17
 100
@@ -2990,6 +2964,32 @@ AcDbLine
 0.0
  11
 800.0
+ 21
+75.0
+ 31
+0.0
+  0
+LINE
+  5
+4B
+330
+17
+100
+AcDbEntity
+  8
+cutouts
+370
+18
+100
+AcDbLine
+ 10
+1025.0
+ 20
+325.0
+ 30
+0.0
+ 11
+1025.0
  21
 75.0
  31
@@ -3399,32 +3399,6 @@ cutouts
 100
 AcDbLine
  10
-1525.0
- 20
-300.0
- 30
-0.0
- 11
-1575.0
- 21
-300.0
- 31
-0.0
-  0
-LINE
-  5
-5C
-330
-17
-100
-AcDbEntity
-  8
-cutouts
-370
-18
-100
-AcDbLine
- 10
 775.0
  20
 75.0
@@ -3439,7 +3413,7 @@ AcDbLine
   0
 LINE
   5
-5D
+5C
 330
 17
 100
@@ -3465,7 +3439,7 @@ AcDbLine
   0
 LINE
   5
-5E
+5D
 330
 17
 100
@@ -3491,7 +3465,7 @@ AcDbLine
   0
 LINE
   5
-5F
+5E
 330
 17
 100
@@ -3517,7 +3491,7 @@ AcDbLine
   0
 LINE
   5
-60
+5F
 330
 17
 100
@@ -3538,6 +3512,32 @@ AcDbLine
 1000.0
  21
 -175.0
+ 31
+0.0
+  0
+LINE
+  5
+60
+330
+17
+100
+AcDbEntity
+  8
+cutouts
+370
+18
+100
+AcDbLine
+ 10
+1575.0
+ 20
+-100.0
+ 30
+0.0
+ 11
+1575.0
+ 21
+-50.0
  31
 0.0
   0
@@ -3919,15 +3919,15 @@ cutouts
 100
 AcDbLine
  10
-1575.0
+1025.0
  20
--100.0
+-175.0
  30
 0.0
  11
-1575.0
+1025.0
  21
--50.0
+-350.0
  31
 0.0
   0
@@ -3971,15 +3971,15 @@ cutouts
 100
 AcDbLine
  10
-1025.0
+1525.0
  20
-325.0
+300.0
  30
 0.0
  11
-1025.0
+1575.0
  21
-75.0
+300.0
  31
 0.0
   0
@@ -4049,15 +4049,15 @@ visible
 100
 AcDbLine
  10
-1575.0
+1000.0
  20
--350.0
+175.0
  30
 0.0
  11
-1575.0
+955.0
  21
--200.0
+175.0
  31
 0.0
   0
@@ -4101,6 +4101,32 @@ visible
 100
 AcDbLine
  10
+1575.0
+ 20
+-350.0
+ 30
+0.0
+ 11
+1575.0
+ 21
+-200.0
+ 31
+0.0
+  0
+LINE
+  5
+78
+330
+17
+100
+AcDbEntity
+  8
+visible
+370
+9
+100
+AcDbLine
+ 10
 900.0
  20
 180.0
@@ -4115,7 +4141,7 @@ AcDbLine
   0
 LINE
   5
-78
+79
 330
 17
 100
@@ -4141,7 +4167,7 @@ AcDbLine
   0
 LINE
   5
-79
+7A
 330
 17
 100
@@ -4167,7 +4193,7 @@ AcDbLine
   0
 LINE
   5
-7A
+7B
 330
 17
 100
@@ -4193,7 +4219,7 @@ AcDbLine
   0
 LINE
   5
-7B
+7C
 330
 17
 100
@@ -4219,7 +4245,7 @@ AcDbLine
   0
 LINE
   5
-7C
+7D
 330
 17
 100
@@ -4245,7 +4271,7 @@ AcDbLine
   0
 LINE
   5
-7D
+7E
 330
 17
 100
@@ -4271,7 +4297,7 @@ AcDbLine
   0
 LINE
   5
-7E
+7F
 330
 17
 100
@@ -4297,7 +4323,7 @@ AcDbLine
   0
 LINE
   5
-7F
+80
 330
 17
 100
@@ -4323,7 +4349,7 @@ AcDbLine
   0
 LINE
   5
-80
+81
 330
 17
 100
@@ -4349,7 +4375,7 @@ AcDbLine
   0
 LINE
   5
-81
+82
 330
 17
 100
@@ -4375,7 +4401,7 @@ AcDbLine
   0
 LINE
   5
-82
+83
 330
 17
 100
@@ -4401,7 +4427,7 @@ AcDbLine
   0
 LINE
   5
-83
+84
 330
 17
 100
@@ -4427,7 +4453,7 @@ AcDbLine
   0
 LINE
   5
-84
+85
 330
 17
 100
@@ -4448,32 +4474,6 @@ AcDbLine
 1464.0
  21
 -40.0
- 31
-0.0
-  0
-LINE
-  5
-85
-330
-17
-100
-AcDbEntity
-  8
-visible
-370
-9
-100
-AcDbLine
- 10
-800.0
- 20
-150.0
- 30
-0.0
- 11
-900.0
- 21
-150.0
  31
 0.0
   0
@@ -4517,6 +4517,32 @@ visible
 100
 AcDbLine
  10
+800.0
+ 20
+150.0
+ 30
+0.0
+ 11
+900.0
+ 21
+150.0
+ 31
+0.0
+  0
+LINE
+  5
+88
+330
+17
+100
+AcDbEntity
+  8
+visible
+370
+9
+100
+AcDbLine
+ 10
 900.0
  20
 235.0
@@ -4531,7 +4557,7 @@ AcDbLine
   0
 LINE
   5
-88
+89
 330
 17
 100
@@ -4557,7 +4583,7 @@ AcDbLine
   0
 LINE
   5
-89
+8A
 330
 17
 100
@@ -4583,7 +4609,7 @@ AcDbLine
   0
 LINE
   5
-8A
+8B
 330
 17
 100
@@ -4609,7 +4635,7 @@ AcDbLine
   0
 LINE
   5
-8B
+8C
 330
 17
 100
@@ -4635,7 +4661,7 @@ AcDbLine
   0
 LINE
   5
-8C
+8D
 330
 17
 100
@@ -4661,7 +4687,7 @@ AcDbLine
   0
 LINE
   5
-8D
+8E
 330
 17
 100
@@ -4687,32 +4713,6 @@ AcDbLine
   0
 LINE
   5
-8E
-330
-17
-100
-AcDbEntity
-  8
-visible
-370
-9
-100
-AcDbLine
- 10
-1550.0
- 20
-300.0
- 30
-0.0
- 11
-1550.0
- 21
-100.0
- 31
-0.0
-  0
-LINE
-  5
 8F
 330
 17
@@ -4725,6 +4725,32 @@ visible
 100
 AcDbLine
  10
+1550.0
+ 20
+300.0
+ 30
+0.0
+ 11
+1550.0
+ 21
+100.0
+ 31
+0.0
+  0
+LINE
+  5
+90
+330
+17
+100
+AcDbEntity
+  8
+visible
+370
+9
+100
+AcDbLine
+ 10
 1575.0
  20
 100.0
@@ -4739,7 +4765,7 @@ AcDbLine
   0
 LINE
   5
-90
+91
 330
 17
 100
@@ -4765,7 +4791,7 @@ AcDbLine
   0
 LINE
   5
-91
+92
 330
 17
 100
@@ -4791,7 +4817,7 @@ AcDbLine
   0
 LINE
   5
-92
+93
 330
 17
 100
@@ -4817,7 +4843,7 @@ AcDbLine
   0
 LINE
   5
-93
+94
 330
 17
 100
@@ -4843,7 +4869,7 @@ AcDbLine
   0
 LINE
   5
-94
+95
 330
 17
 100
@@ -4864,32 +4890,6 @@ AcDbLine
 900.0
  21
 75.0
- 31
-0.0
-  0
-LINE
-  5
-95
-330
-17
-100
-AcDbEntity
-  8
-visible
-370
-9
-100
-AcDbLine
- 10
-1575.0
- 20
--100.0
- 30
-0.0
- 11
-1575.0
- 21
--200.0
  31
 0.0
   0
@@ -5141,15 +5141,15 @@ visible
 100
 AcDbLine
  10
-1000.0
+1575.0
  20
-175.0
+-100.0
  30
 0.0
  11
-955.0
+1575.0
  21
-175.0
+-200.0
  31
 0.0
   0
@@ -5293,7 +5293,7 @@ AcDbEntity
   8
 annotations
 370
-9
+5
 100
 AcDbLine
  10
@@ -5319,7 +5319,7 @@ AcDbEntity
   8
 annotations
 370
-9
+5
 100
 AcDbLine
  10
@@ -5345,7 +5345,7 @@ AcDbEntity
   8
 annotations
 370
-9
+5
 100
 AcDbLine
  10
@@ -5371,7 +5371,7 @@ AcDbEntity
   8
 annotations
 370
-9
+5
 100
 AcDbLine
  10
@@ -5397,7 +5397,7 @@ AcDbEntity
   8
 annotations
 370
-9
+5
 100
 AcDbLine
  10
@@ -5423,7 +5423,7 @@ AcDbEntity
   8
 annotations
 370
-9
+5
 100
 AcDbLine
  10
@@ -5449,7 +5449,7 @@ AcDbEntity
   8
 annotations
 370
-9
+5
 100
 AcDbLine
  10
@@ -5475,7 +5475,7 @@ AcDbEntity
   8
 annotations
 370
-9
+5
 100
 AcDbLine
  10
@@ -5501,7 +5501,7 @@ AcDbEntity
   8
 annotations
 370
-9
+5
 100
 AcDbLine
  10
@@ -5527,7 +5527,7 @@ AcDbEntity
   8
 annotations
 370
-9
+5
 100
 AcDbLine
  10
@@ -5553,7 +5553,7 @@ AcDbEntity
   8
 annotations
 370
-9
+5
 100
 AcDbLine
  10
@@ -5579,7 +5579,7 @@ AcDbEntity
   8
 annotations
 370
-9
+5
 100
 AcDbLine
  10
@@ -5605,7 +5605,7 @@ AcDbEntity
   8
 annotations
 370
-9
+5
 100
 AcDbLine
  10
@@ -5631,7 +5631,7 @@ AcDbEntity
   8
 annotations
 370
-9
+5
 100
 AcDbLine
  10
@@ -5657,7 +5657,7 @@ AcDbEntity
   8
 annotations
 370
-9
+5
 100
 AcDbLine
  10
@@ -5683,7 +5683,7 @@ AcDbEntity
   8
 annotations
 370
-9
+5
 100
 AcDbLine
  10
@@ -5709,7 +5709,7 @@ AcDbEntity
   8
 annotations
 370
-9
+5
 100
 AcDbLine
  10
@@ -5735,7 +5735,7 @@ AcDbEntity
   8
 annotations
 370
-9
+5
 100
 AcDbLine
  10
@@ -6775,7 +6775,7 @@ DictionaryVariables
 280
 0
   1
-1.3.1 @ 2024-07-04T02:53:37.429561+00:00
+1.3.1 @ 2024-07-04T03:12:50.003439+00:00
   0
 DICTIONARYVAR
   5
@@ -6787,7 +6787,7 @@ DictionaryVariables
 280
 0
   1
-1.3.1 @ 2024-07-04T02:53:37.436560+00:00
+1.3.1 @ 2024-07-04T03:12:50.010439+00:00
   0
 ENDSEC
   0

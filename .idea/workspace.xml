@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="25043644-4411-4e1b-9269-2b584d342d14" name="Changes" comment="feat(linetype): &#10;&#10;- added linetype&#10;- refactored save and load : moved in main window&#10;- added event emitters and slots on layers and drawing changes&#10;that bubble up to the MainWindow">
+    <list default="true" id="25043644-4411-4e1b-9269-2b584d342d14" name="Changes" comment="feat(improvements): &#10;&#10;- improved optics for grid&#10;- improved layout of settings&#10;- improved interaction on layer manager">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/example.dxf" beforeDir="false" afterPath="$PROJECT_DIR$/example.dxf" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pycad/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/pycad/main.py" afterDir="false" />
@@ -242,7 +242,15 @@
       <option name="project" value="LOCAL" />
       <updated>1720058610048</updated>
     </task>
-    <option name="localTasksCounter" value="20" />
+    <task id="LOCAL-00020" summary="feat(improvements): &#10;&#10;- improved optics for grid&#10;- improved layout of settings&#10;- improved interaction on layer manager">
+      <option name="closed" value="true" />
+      <created>1720061781028</created>
+      <option name="number" value="00020" />
+      <option name="presentableId" value="LOCAL-00020" />
+      <option name="project" value="LOCAL" />
+      <updated>1720061781028</updated>
+    </task>
+    <option name="localTasksCounter" value="21" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -257,6 +265,7 @@
     <MESSAGE value="fix(various): &#10;&#10;- snap grid visibility" />
     <MESSAGE value="feat(packaging): &#10;&#10;- pyinstall packaging&#10;- cmd/bash launchers" />
     <MESSAGE value="feat(linetype): &#10;&#10;- added linetype&#10;- refactored save and load : moved in main window&#10;- added event emitters and slots on layers and drawing changes&#10;that bubble up to the MainWindow" />
-    <option name="LAST_COMMIT_MESSAGE" value="feat(linetype): &#10;&#10;- added linetype&#10;- refactored save and load : moved in main window&#10;- added event emitters and slots on layers and drawing changes&#10;that bubble up to the MainWindow" />
+    <MESSAGE value="feat(improvements): &#10;&#10;- improved optics for grid&#10;- improved layout of settings&#10;- improved interaction on layer manager" />
+    <option name="LAST_COMMIT_MESSAGE" value="feat(improvements): &#10;&#10;- improved optics for grid&#10;- improved layout of settings&#10;- improved interaction on layer manager" />
   </component>
 </project>
