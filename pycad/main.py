@@ -8,7 +8,8 @@ import ezdxf
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QPushButton,
     QColorDialog, QSpinBox, QListWidget, QListWidgetItem,
-    QLineEdit, QCheckBox, QHBoxLayout, QVBoxLayout, QDialog, QRadioButton, QStyle, QLabel, QComboBox,
+    QLineEdit, QCheckBox, QHBoxLayout, QVBoxLayout, QDialog, QRadioButton, QStyle, QLabel, QComboBox, QSizePolicy,
+    QSpacerItem,
 )
 from PySide6.QtGui import QPainter, QPen, QColor, QTransform, QMouseEvent
 from PySide6.QtCore import Qt, QPoint, Signal
@@ -122,7 +123,7 @@ def draw_point(painter: QPainter, point: QPoint, color: int = Qt.red):
     size = 1
     pen = QPen(QColor(color), size, Qt.SolidLine)
     painter.setPen(pen)
-    painter.drawRect(x - size, y - size, 2 * size, 2 * size)
+    painter.drawRect(x - 0.5, y - 0.5, 1.0, 1.0)
 
 
 def draw_rect(painter: QPainter, point: QPoint):
@@ -460,10 +461,10 @@ class DrawingManager(QWidget):
         cy = round(center.y() / NY) * NY
         for ix in range(26):
             for iy in range(26):
-                draw_point(painter, QPoint(cx + ix * dx, cy + iy * dy), Qt.black)
-                draw_point(painter, QPoint(cx + ix * dx, cy - iy * dy), Qt.black)
-                draw_point(painter, QPoint(cx - ix * dx, cy + iy * dy), Qt.black)
-                draw_point(painter, QPoint(cx - ix * dx, cy - iy * dy), Qt.black)
+                draw_point(painter, QPoint(cx + ix * dx, cy + iy * dy), 0x555555)
+                draw_point(painter, QPoint(cx + ix * dx, cy - iy * dy), 0x555555)
+                draw_point(painter, QPoint(cx - ix * dx, cy + iy * dy), 0x555555)
+                draw_point(painter, QPoint(cx - ix * dx, cy - iy * dy), 0x555555)
 
 
 class LayerItem(QWidget):
@@ -573,6 +574,7 @@ class LayerItem(QWidget):
 
 class LayerManager(QDialog):
     changed = Signal(object)  # Define a custom signal with a generic object type
+    closed = Signal(bool)  # Define a custom signal with a generic object type
 
     def __init__(self, canvas, parent=None):
         super().__init__(parent)
@@ -625,6 +627,9 @@ class LayerManager(QDialog):
         # Handle the layer data change here
         self.emit_change()
 
+    def closeEvent(self, event):
+        self.closed.emit(True)
+
 
 class MainWindow(QMainWindow):
     def __init__(self, file: str, temp: str):
@@ -634,6 +639,7 @@ class MainWindow(QMainWindow):
         self.grid_snap_x: QSpinBox = None
         self.grid_snap_y: QSpinBox = None
         self.snap_distance: QSpinBox = None
+        self.layout_man_button: QPushButton = None
         self.setGeometry(100, 100, 800, 600)  # Initial window size
         self.drawing_manager = DrawingManager()
         self.drawing_manager.setStyleSheet("background-color: black;")
@@ -644,6 +650,7 @@ class MainWindow(QMainWindow):
         self.layer_manager.setMaximumHeight(720)
         self.layer_manager.setMinimumHeight(480)
         self.layer_manager.changed.connect(self.on_layers_changed)
+        self.layer_manager.closed.connect(self.on_layer_manager_closed)
         self.layer_manager.show()  # Show the layer manager as a non-blocking modal
         self.init_ui()
         self.load_dxf(file)
@@ -679,53 +686,57 @@ class MainWindow(QMainWindow):
         # print(f"{model}", flush=True)
         self.save_dxf(self.temp_file)
 
+    def on_layer_manager_closed(self, value):
+        self.layout_man_button.setEnabled(value)
+
     def init_ui(self):
         main_layout = QVBoxLayout()
+        size_policy = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
 
         # Add buttons and checkboxes
         control_layout = QHBoxLayout()
-
-        grid_snap_checkbox = QCheckBox("Grid Snap")
-        grid_snap_checkbox.setChecked(True)
-        grid_snap_checkbox.stateChanged.connect(self.on_grid_snap_changed)
-        control_layout.addWidget(grid_snap_checkbox)
-
-        grid_snap_x_label = QLabel()
-        grid_snap_x_label.setText("X")
-        control_layout.addWidget(grid_snap_x_label)
-
-        self.grid_snap_x = QSpinBox()
-        self.grid_snap_x.setValue(self.drawing_manager.gridSpacing.x())
-        self.grid_snap_x.valueChanged.connect(self.on_grid_spacing_x_changed)
-        control_layout.addWidget(self.grid_snap_x)
-
-        grid_snap_y_label = QLabel()
-        grid_snap_y_label.setText("Y")
-        control_layout.addWidget(grid_snap_y_label)
-
-        self.grid_snap_y = QSpinBox()
-        self.grid_snap_y.setValue(self.drawing_manager.gridSpacing.x())
-        self.grid_snap_y.valueChanged.connect(self.on_grid_spacing_y_changed)
-        control_layout.addWidget(self.grid_snap_y)
-
-        grid_snap_checkbox = QCheckBox("Grid Snap")
-        grid_snap_checkbox.setChecked(True)
-        grid_snap_checkbox.stateChanged.connect(self.on_grid_snap_changed)
-        control_layout.addWidget(grid_snap_checkbox)
+        control_layout.setAlignment(Qt.AlignLeft)
 
         vertex_snap_checkbox = QCheckBox("Vertex Snap")
         vertex_snap_checkbox.setChecked(True)
         vertex_snap_checkbox.stateChanged.connect(self.on_vertex_snap_changed)
         control_layout.addWidget(vertex_snap_checkbox)
 
-        snap_distance_label = QLabel()
-        snap_distance_label.setText("snap distance")
-        control_layout.addWidget(snap_distance_label)
+        grid_snap_checkbox = QCheckBox("Grid Snap")
+        grid_snap_checkbox.setChecked(True)
+        grid_snap_checkbox.stateChanged.connect(self.on_grid_snap_changed)
+        control_layout.addWidget(grid_snap_checkbox)
+
+        control_layout.addWidget(QLabel("grid spacing X"))
+
+        self.grid_snap_x = QSpinBox()
+        self.grid_snap_x.setValue(self.drawing_manager.gridSpacing.x())
+        self.grid_snap_x.valueChanged.connect(self.on_grid_spacing_x_changed)
+        control_layout.addWidget(self.grid_snap_x)
+
+        control_layout.addWidget(QLabel("Y"))
+
+        self.grid_snap_y = QSpinBox()
+        self.grid_snap_y.setValue(self.drawing_manager.gridSpacing.x())
+        self.grid_snap_y.valueChanged.connect(self.on_grid_spacing_y_changed)
+        control_layout.addWidget(self.grid_snap_y)
+
+        control_layout.addWidget(QLabel("snap distance"))
 
         self.snap_distance = QSpinBox()
         self.snap_distance.setValue(self.drawing_manager.snapDistance)
         self.snap_distance.valueChanged.connect(self.on_grid_snap_distance_changed)
         control_layout.addWidget(self.snap_distance)
+
+        control_layout.addItem(QSpacerItem(40, 20, size_policy.horizontalPolicy(), size_policy.verticalPolicy()))
+
+        self.layout_man_button = QPushButton("Layers")
+        self.layout_man_button.clicked.connect(self.show_layers)
+        self.layout_man_button.setEnabled(False)
+        control_layout.addWidget(self.layout_man_button)
+
+        # for ii in range(0, control_layout.count()):
+        #     control_layout.itemAt(ii).widget().setSizePolicy(size_policy)
 
         main_layout.addLayout(control_layout)
         main_layout.addWidget(self.drawing_manager)
@@ -739,6 +750,11 @@ class MainWindow(QMainWindow):
         self.layer_manager.update_layer_list()
         self.layer_manager.layer_list.setCurrentRow(0)
         self.drawing_manager.set_current_layer(0)
+
+    def show_layers(self):
+
+        self.layout_man_button.setEnabled(False)
+        self.layer_manager.show()
 
     def closeEvent(self, event):
         self.save_dxf(self.dxf_file)
@@ -794,7 +810,7 @@ class MainWindow(QMainWindow):
         self.drawing_manager.update()
         self.layer_manager.update_layer_list()
 
-    def save_dxf(self,filename):
+    def save_dxf(self, filename):
 
         doc = ezdxf.new()
 

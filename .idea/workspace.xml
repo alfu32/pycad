@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="25043644-4411-4e1b-9269-2b584d342d14" name="Changes" comment="feat(packaging): &#10;&#10;- pyinstall packaging&#10;- cmd/bash launchers">
+    <list default="true" id="25043644-4411-4e1b-9269-2b584d342d14" name="Changes" comment="feat(linetype): &#10;&#10;- added linetype&#10;- refactored save and load : moved in main window&#10;- added event emitters and slots on layers and drawing changes&#10;that bubble up to the MainWindow">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/example.dxf" beforeDir="false" afterPath="$PROJECT_DIR$/example.dxf" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pycad/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/pycad/main.py" afterDir="false" />
@@ -234,7 +234,15 @@
       <option name="project" value="LOCAL" />
       <updated>1720047449921</updated>
     </task>
-    <option name="localTasksCounter" value="19" />
+    <task id="LOCAL-00019" summary="feat(linetype): &#10;&#10;- added linetype&#10;- refactored save and load : moved in main window&#10;- added event emitters and slots on layers and drawing changes&#10;that bubble up to the MainWindow">
+      <option name="closed" value="true" />
+      <created>1720058610048</created>
+      <option name="number" value="00019" />
+      <option name="presentableId" value="LOCAL-00019" />
+      <option name="project" value="LOCAL" />
+      <updated>1720058610048</updated>
+    </task>
+    <option name="localTasksCounter" value="20" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -248,6 +256,7 @@
     <MESSAGE value="fix(various): &#10;&#10;- screen entities  should not scale with zoom&#10;- magnet distance ( the snap distance should be in function of zoom )&#10;- grid snap should snap with magnet distance like for vertices,&#10;fixed loading layer props" />
     <MESSAGE value="fix(various): &#10;&#10;- snap grid visibility" />
     <MESSAGE value="feat(packaging): &#10;&#10;- pyinstall packaging&#10;- cmd/bash launchers" />
-    <option name="LAST_COMMIT_MESSAGE" value="feat(packaging): &#10;&#10;- pyinstall packaging&#10;- cmd/bash launchers" />
+    <MESSAGE value="feat(linetype): &#10;&#10;- added linetype&#10;- refactored save and load : moved in main window&#10;- added event emitters and slots on layers and drawing changes&#10;that bubble up to the MainWindow" />
+    <option name="LAST_COMMIT_MESSAGE" value="feat(linetype): &#10;&#10;- added linetype&#10;- refactored save and load : moved in main window&#10;- added event emitters and slots on layers and drawing changes&#10;that bubble up to the MainWindow" />
   </component>
 </project>
