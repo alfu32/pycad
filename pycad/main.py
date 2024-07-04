@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QPushButton,
     QColorDialog, QSpinBox, QListWidget, QListWidgetItem,
     QLineEdit, QCheckBox, QHBoxLayout, QVBoxLayout, QDialog, QRadioButton, QStyle, QLabel, QComboBox, QSizePolicy,
-    QSpacerItem,
+    QSpacerItem, QInputDialog,
 )
 from PySide6.QtGui import QPainter, QPen, QColor, QTransform, QMouseEvent
 from PySide6.QtCore import Qt, QPoint, Signal
@@ -17,30 +17,7 @@ from ezdxf.sections.table import (
     LayerTable, Layer
 )
 
-TOLERANCE = 2
-
-lwindex = [0, 5, 9, 13, 15, 18, 20, 25,
-           30, 35, 40, 50, 53, 60, 70, 80,
-           90, 100, 106, 120, 140, 158, 200,
-           ]
-lwrindex = {0: 0, 5: 1, 9: 2, 13: 3, 15: 4, 18: 5, 20: 5, 25: 6,
-            30: 7, 35: 8, 40: 9, 50: 10, 53: 11, 60: 12, 70: 13, 80: 13,
-            90: 14, 100: 15, 106: 16, 120: 17, 140: 18, 158: 19, 200: 20,
-            }
-linetypes = {
-    "Continuous": [],
-    "Dashed": [10, 10],  # 10 units on, 10 units off
-    "DashedLarge": [20, 10],  # 10 units on, 10 units off
-    "Dotted": [1, 10],  # 1 unit on, 10 units off
-    "DottedLarge": [1, 20],  # 1 unit on, 10 units off
-    "DashDot": [10, 5, 1, 5],  # 10 units on, 5 units off, 1 unit on, 5 units off
-    "DashDotLarge": [20, 10, 1, 10],  # 10 units on, 5 units off, 1 unit on, 5 units off
-    "DashDotDot": [10, 5, 1, 5, 1, 5],  # 10 units on, 5 units off, 1 unit on, 5 units off, 1 unit on, 5 units off
-    "DashDotDotLarge": [20, 10, 1, 10, 1, 10]
-    # 10 units on, 5 units off, 1 unit on, 5 units off, 1 unit on, 5 units off
-}
-
-dxf_app_id = "e8ec01b43m15-PYCAD-1.0.0"
+from pycad.Drawable import Line, linetypes, lwrindex, dxf_app_id, lwindex, Text, Dimension, Drawable
 
 
 def round_to_nearest(value, base):
@@ -101,9 +78,9 @@ def split_line_by_points(line, points):
     segments = []
     start = line.start_point
     for point in points:
-        segments.append(Line(start, point, line.color, line.width))
+        segments.append(Line(start, point))
         start = point
-    segments.append(Line(start, line.end_point, line.color, line.width))
+    segments.append(Line(start, line.end_point))
     return segments
 
 
@@ -159,65 +136,6 @@ def snap_to_angle(start_point, end_point):
     return snapped_end_point
 
 
-class Line:
-    def __init__(self, start_point, end_point, color, width):
-        self.start_point = start_point
-        self.end_point = end_point
-        self.color = color
-        self.width = width
-
-    def contains_point(self, point):
-        margin = 5
-        x1, y1 = self.start_point.x(), self.start_point.y()
-        x2, y2 = self.end_point.x(), self.end_point.y()
-        xp, yp = point.x(), point.y()
-
-        if min(x1, x2) - margin <= xp <= max(x1, x2) + margin and min(y1, y2) - margin <= yp <= max(y1, y2) + margin:
-            distance = abs((y2 - y1) * xp - (x2 - x1) * yp + x2 * y1 - y2 * x1) / math.hypot(y2 - y1, x2 - x1)
-            return distance <= margin
-        return False
-
-    def intersect(self, other):
-        def ccw(A, B, C):
-            return (C.y() - A.y()) * (B.x() - A.x()) > (B.y() - A.y()) * (C.x() - A.x())
-
-        A = self.start_point
-        B = self.end_point
-        C = other.start_point
-        D = other.end_point
-
-        if ccw(A, C, D) != ccw(B, C, D) and ccw(A, B, C) != ccw(A, B, D):
-            denom = (A.x() - B.x()) * (C.y() - D.y()) - (A.y() - B.y()) * (C.x() - D.x())
-            if denom == 0:
-                return None
-            intersect_x = ((A.x() * B.y() - A.y() * B.x()) * (C.x() - D.x()) - (A.x() - B.x()) * (
-                    C.x() * D.y() - C.y() * D.x())) / denom
-            intersect_y = ((A.x() * B.y() - A.y() * B.x()) * (C.y() - D.y()) - (A.y() - B.y()) * (
-                    C.x() * D.y() - C.y() * D.x())) / denom
-            return QPoint(intersect_x, intersect_y)
-        return None
-
-    def _points_equal(self, p1, p2):
-        return abs(p1.x() - p2.x()) <= TOLERANCE and abs(p1.y() - p2.y()) <= TOLERANCE
-
-    def is_short(self, threshold=1.0):
-        length = math.hypot(self.start_point.x() - self.end_point.x(), self.start_point.y() - self.end_point.y())
-        return length < threshold
-
-    def __eq__(self, other):
-        if not isinstance(other, Line):
-            return False
-        return (self._points_equal(self.start_point, other.start_point) and self._points_equal(self.end_point,
-                                                                                               other.end_point)) or \
-            (self._points_equal(self.start_point, other.end_point) and self._points_equal(self.end_point,
-                                                                                          other.start_point))
-
-    def __hash__(self):
-        start_tuple = (self.start_point.x(), self.start_point.y())
-        end_tuple = (self.end_point.x(), self.end_point.y())
-        return hash((min(start_tuple, end_tuple), max(start_tuple, end_tuple)))
-
-
 class LayerModel:
     def __init__(self, name="Layer", color=QColor(Qt.black), width=2, visible=True):
         self.linetype = "Continuous"
@@ -225,12 +143,13 @@ class LayerModel:
         self.color = color
         self.width = width
         self.visible = visible
-        self.lines = []
+        self.drawables = []
         self.flAutoCut = False
 
-    def add_line(self, line):
-        self.lines.append(line)
-        self.cleanup()
+    def add_drawable(self, line: Line):
+        self.drawables.append(line)
+        if isinstance(line, Line):
+            self.cleanup()
 
     def cleanup(self):
         if self.flAutoCut:
@@ -240,8 +159,8 @@ class LayerModel:
 
     def rescan_intersections(self):
         intersection_table = []
-        for i, line1 in enumerate(self.lines):
-            for j, line2 in enumerate(self.lines):
+        for i, line1 in enumerate(self.drawables):
+            for j, line2 in enumerate(self.drawables):
                 if i < j:
                     intersect_point = line1.intersect(line2)
                     if intersect_point:
@@ -256,19 +175,19 @@ class LayerModel:
 
         new_lines = []
         for line_idx, intersect_points in intersection_groups.items():
-            line = self.lines[line_idx]
+            line = self.drawables[line_idx]
             sorted_points = sort_points_on_line(line, intersect_points)
             new_lines.extend(split_line_by_points(line, sorted_points))
 
-        self.lines = [line for idx, line in enumerate(self.lines) if idx not in intersection_groups]
-        self.lines.extend(new_lines)
+        self.drawables = [line for idx, line in enumerate(self.drawables) if idx not in intersection_groups]
+        self.drawables.extend(new_lines)
 
     def cleanup_duplicates(self):
-        unique_lines = set(self.lines)
-        self.lines = list(unique_lines)
+        unique_lines = set(self.drawables)
+        self.drawables = list(unique_lines)
 
     def remove_short_lines(self):
-        self.lines = [line for line in self.lines if not line.is_short()]
+        self.drawables = [line for line in self.drawables if not line.is_empty()]
 
 
 class DrawingManager(QWidget):
@@ -280,7 +199,7 @@ class DrawingManager(QWidget):
         self.setCursor(Qt.BlankCursor)
         self.layers = [LayerModel(name="0")]
         self.current_layer_index = 0
-        self.current_line = None
+        self.current_drawable: Drawable = None
         self.zoom_factor = 1.0
         self.offset = QPoint(0, 0)
         self.flSnapGrid = True
@@ -361,41 +280,55 @@ class DrawingManager(QWidget):
         self.model_point_snapped = self.apply_mouse_input_modifiers(self.model_point_raw)
         self.screen_point_snapped = self.map_to_view(self.model_point_snapped)
 
+    def create_drawable(self, p1: QPoint, p2: QPoint) -> Drawable:
+        if self.mode == 'line':
+            return Line(p1, p2)
+        elif self.mode == 'text':
+            return Text("placeholder", p1, p2, 25)
+        elif self.mode == 'dimension':
+            return Dimension(p1, p2)
+
     def mousePressEvent(self, event: QMouseEvent):
         self.update_mouse_positions(event)
         if event.button() == Qt.LeftButton:
             layer = self.layers[self.current_layer_index]
-            self.current_line = Line(self.model_point_snapped, self.model_point_snapped, layer.color, layer.width)
+            self.current_drawable = self.create_drawable(
+                self.model_point_snapped,
+                self.model_point_snapped,
+            )
         elif event.button() == Qt.RightButton:
             clayer = self.current_layer()
-            for line in clayer.lines:
+            for line in clayer.drawables:
                 if line.contains_point(self.model_point_raw):
-                    clayer.lines.remove(line)
+                    clayer.drawables.remove(line)
                     self.update()
         self.changed.emit(self.layers)
 
     def mouseMoveEvent(self, event):
         self.update_mouse_positions(event)
-        if self.current_line:
+        if self.current_drawable:
             end_point = self.model_point_snapped
             if event.modifiers() & Qt.ControlModifier:
-                end_point = snap_to_angle(self.current_line.start_point, end_point)
-            self.current_line.end_point = end_point
+                end_point = snap_to_angle(self.current_drawable.start_point, end_point)
+            self.current_drawable.end_point = end_point
             # Update line color and width to match the current layer
             layer = self.layers[self.current_layer_index]
-            self.current_line.color = layer.color
-            self.current_line.width = layer.width
+            self.current_drawable.color = layer.color
+            self.current_drawable.width = layer.width
         self.update()
 
     def mouseReleaseEvent(self, event):
         self.update_mouse_positions(event)
-        if self.current_line:
+        if self.current_drawable:
             end_point = self.model_point_snapped
             if event.modifiers() & Qt.ControlModifier:
-                end_point = snap_to_angle(self.current_line.start_point, end_point)
-            self.current_line.end_point = end_point
-            self.layers[self.current_layer_index].add_line(self.current_line)
-            self.current_line = None
+                end_point = snap_to_angle(self.current_drawable.start_point, end_point)
+            self.current_drawable.end_point = end_point
+            if isinstance(self.current_drawable, Text):
+                text, ok = QInputDialog.getText(self, 'Text Input Dialog', 'Enter some text:')
+                self.current_drawable.text = text
+            self.layers[self.current_layer_index].add_drawable(self.current_drawable)
+            self.current_drawable = None
         self.changed.emit(self.layers)
         self.update()
 
@@ -406,13 +339,13 @@ class DrawingManager(QWidget):
         for layer in self.layers:
             if not layer.visible:
                 continue
-            for line in layer.lines:
-                draw_rect(painter, self.map_to_view(line.start_point))
-                draw_rect(painter, self.map_to_view(line.end_point))
+            for drawable in layer.drawables:
+                draw_rect(painter, self.map_to_view(drawable.start_point))
+                draw_rect(painter, self.map_to_view(drawable.end_point))
 
-        if self.current_line:
-            draw_rect(painter, self.map_to_view(self.current_line.start_point))
-            draw_rect(painter, self.map_to_view(self.current_line.end_point))
+        if self.current_drawable:
+            draw_rect(painter, self.map_to_view(self.current_drawable.start_point))
+            draw_rect(painter, self.map_to_view(self.current_drawable.end_point))
 
         transform = QTransform()
         transform.translate(self.offset.x(), self.offset.y())
@@ -422,18 +355,18 @@ class DrawingManager(QWidget):
         for layer in self.layers:
             if not layer.visible:
                 continue
-            for line in layer.lines:
+            for drawable in layer.drawables:
                 pen = QPen(layer.color, layer.width / self.zoom_factor, Qt.SolidLine)
                 pen.setDashPattern(linetypes[layer.linetype])
                 painter.setPen(pen)
-                painter.drawLine(line.start_point, line.end_point)
-        if self.current_line:
+                drawable.draw(painter)
+        if self.current_drawable:
             layer = self.current_layer()
             pen = QPen(self.current_layer().color, self.current_layer().width / self.zoom_factor, Qt.SolidLine)
 
             pen.setDashPattern(linetypes[layer.linetype])
             painter.setPen(pen)
-            painter.drawLine(self.current_line.start_point, self.current_line.end_point)
+            drawable.draw(painter)
 
         if self.flSnapGrid:
             self.draw_local_grid(painter, self.model_point_snapped, 0x8888887f)
@@ -444,7 +377,7 @@ class DrawingManager(QWidget):
     def get_all_points(self):
         points = []
         for layer in self.layers:
-            for line in layer.lines:
+            for line in layer.drawables:
                 points.append(line.start_point)
                 points.append(line.end_point)
         return points
@@ -452,7 +385,7 @@ class DrawingManager(QWidget):
     def get_all_lines(self):
         lines = []
         for layer in self.layers:
-            for line in layer.lines:
+            for line in layer.drawables:
                 lines.append(line)
         return lines
 
@@ -837,16 +770,22 @@ class MainWindow(QMainWindow):
             self.drawing_manager.layers.append(layer)
 
         for entity in doc.entities:
+            drawable = None
             if entity.dxftype() == 'LINE':
                 start_point = QPoint(entity.dxf.start.x, entity.dxf.start.y)
                 end_point = QPoint(entity.dxf.end.x, entity.dxf.end.y)
                 color = QColor(entity.dxf.color) if entity.dxf.hasattr('color') else QColor(Qt.black)
                 width = entity.dxf.lineweight if entity.dxf.hasattr('lineweight') else 1
-                line = Line(start_point, end_point, color, width)
-                layer_name = entity.dxf.layer
+                drawable = Line(start_point, end_point)
+            elif entity.dxftype() == 'TEXT':
+                drawable = Text.from_dxf(entity)
+            elif entity.dxftype() == 'DIMENSION':
+                drawable = Dimension.from_dxf(entity)
+            layer_name = entity.dxf.layer
+            if drawable:
                 for layer in self.drawing_manager.layers:
-                    if layer.name == layer_name:
-                        layer.add_line(line)
+                    if layer is not None and layer.name is not None and layer.name == layer_name:
+                        layer.add_drawable(drawable)
                         break
 
         self.layer_manager.current_layer_index = 0
@@ -855,7 +794,7 @@ class MainWindow(QMainWindow):
 
     def save_dxf(self, filename):
 
-        doc = ezdxf.new()
+        doc: ezdxf.drawing.Drawing = ezdxf.new()
 
         if not doc.appids.has_entry(dxf_app_id):
             doc.appids.new(dxf_app_id)
@@ -871,8 +810,6 @@ class MainWindow(QMainWindow):
                     name=layer.name,
                     dxfattribs={
                         "true_color": qcolor_to_dxf_color(layer.color),
-                        "lineweight": lwindex[layer.width],
-                        "linetype": layer.linetype,
                     }
                 )
 
@@ -883,16 +820,8 @@ class MainWindow(QMainWindow):
                     (1070, 1 if layer.flAutoCut else 0),
                 ]
                 dxf_layer.set_xdata(dxf_app_id, xdata)
-            for line in layer.lines:
-                doc.modelspace().add_line(
-                    (line.start_point.x(), line.start_point.y()),
-                    (line.end_point.x(), line.end_point.y()),
-                    dxfattribs={
-                        'layer': layer.name,
-                        'color': qcolor_to_dxf_color(layer.color),
-                        'lineweight': lwindex[layer.width]
-                    }
-                )
+            for drawable in layer.drawables:
+                drawable.save_to_dxf(doc,layer_name=layer.name)
 
         doc.saveas(filename)
 
