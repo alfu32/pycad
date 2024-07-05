@@ -1,13 +1,14 @@
 import math
 from abc import ABC, abstractmethod
 import ezdxf
-from PySide6.QtGui import QPainter
+from PySide6.QtGui import QPainter, QFontMetrics
 from PySide6.QtCore import Qt, QPoint, Signal, QPointF
 
 from ezdxf.entities import Text as DXFText
 from ezdxf.entities import Dimension as DXFDimension
 from ezdxf.document import Drawing as DXFDrawing
 from ezdxf.document import Modelspace as DXFModelspace
+from ezdxf.enums import TextEntityAlignment
 
 TOLERANCE = 2
 
@@ -35,10 +36,61 @@ linetypes = {
 dxf_app_id = "e8ec01b43m15-PYCAD-1.0.0"
 
 
+# Example function to get text dimensions
+def get_text_dimensions(painter, text):
+    font = painter.font()
+    metrics = QFontMetrics(font)
+    width = metrics.horizontalAdvance(text)
+    height = metrics.height()
+    return width, height
+
+
+def sign(n):
+    return -1 if n < 0 else 1
+
+
+def mabs(n):
+    return sign(n) * n
+
+
+def mod(number, module):
+    if module == 0:
+        return number
+    n = number
+    m = mabs(module)
+    while n > m:
+        n -= m
+    return n
+
+
+def get_pen_width(painter: QPainter):
+    # Get the current pen
+    pen = painter.pen()
+    # Modify the pen width
+    return pen.width()
+
+
+def set_pen_width(painter, width):
+    # Get the current pen
+    pen = painter.pen()
+    # Modify the pen width
+    pen.setWidth(width)
+    # Set the modified pen back to the painter
+    painter.setPen(pen)
+
+
 class Drawable(ABC):
     def __init__(self, start_point, end_point):
         self.start_point = start_point
         self.end_point = end_point
+
+    @abstractmethod
+    def update(self, painter: QPainter):
+        pass
+
+    @abstractmethod
+    def set_last_point(self, point: QPoint):
+        pass
 
     @abstractmethod
     def intersect(self, other) -> bool:
@@ -64,6 +116,9 @@ class Drawable(ABC):
     def from_dxf(cls, entity_data) -> 'Drawable':
         pass
 
+    def get_rotation(self):
+        return math.atan2(self.start_point.y() - self.end_point.y(), self.start_point.x() - self.end_point.x())
+
 
 def _points_equal(start_point, end_point):
     return abs(start_point.x() - end_point.x()) <= TOLERANCE and abs(start_point.y() - end_point.y()) <= TOLERANCE
@@ -71,9 +126,15 @@ def _points_equal(start_point, end_point):
 
 class Line(Drawable, ABC):
 
-    def __init__(self, start_point, end_point):
-        self.start_point = start_point
-        self.end_point = end_point
+    def __init__(self, start_point: QPoint, end_point: QPoint):
+        self.start_point: QPoint = start_point
+        self.end_point: QPoint = end_point
+
+    def update(self, painter: QPainter):
+        pass
+
+    def set_last_point(self, point: QPoint):
+        self.end_point = point
 
     def contains_point(self, point):
         margin = 5
@@ -145,11 +206,22 @@ class Line(Drawable, ABC):
 
 
 class Text(Drawable):
-    def __init__(self, text, start_point, end_point=0, height=1.0):
+    def __init__(self, start_point, end_point=None, height=1.0, text="init"):
         self.text = text
         self.start_point = start_point
         self.end_point = end_point
         self.height = height
+
+    def update(self, painter: QPainter):
+        # start_point = self.start_point
+        # tw, th = get_text_dimensions(painter, self.text)
+        # r = -self.get_rotation()
+        # du = QPoint(tw*math.cos(r),tw*math.sin(r),)
+        # self.end_point = QPoint(start_point.x() + du.x(), start_point.y() + du.y())
+        pass
+
+    def set_last_point(self, point: QPoint):
+        self.end_point = point
 
     def contains_point(self, point):
         margin = self.height
@@ -168,38 +240,64 @@ class Text(Drawable):
     def is_empty(self, threshold=1.0) -> bool:
         return False
 
-    def get_rotation(self):
-        return math.atan2(self.start_point.y() - self.end_point.y(), self.start_point.x() - self.end_point.x())
-
     def draw(self, painter: QPainter):
+        start_point = self.start_point
+        rotation_deg = (self.get_rotation() + math.pi) * 180 / math.pi
+        text = f"{self.text} ({rotation_deg:.2f})"
+        text = f"{self.text}"
+
         painter.save()
-        painter.translate(self.start_point.x(), self.start_point.y())
-        painter.rotate(self.get_rotation())
-        painter.drawText(0, 0, self.text)
+        painter.translate(start_point.x(), start_point.y())
+        painter.rotate(rotation_deg)
+        painter.drawText(0, 0, text)
         painter.restore()
+
+    def length(self):
+        return math.hypot(self.start_point.x() - self.end_point.x(), self.start_point.y() - self.end_point.y())
 
     def save_to_dxf(self, dxf_document: DXFDrawing, layer_name: str):
         msp: DXFModelspace = dxf_document.modelspace()
-        text_entity = msp.add_text(
+        text_entity: DXFText = msp.add_text(
             self.text,
             dxfattribs={
                 'height': self.height,
-                'rotation': self.get_rotation(),
-                'layer': layer_name
+                'rotation': (self.get_rotation() + math.pi) * 180 / math.pi,
+                'width': self.length(),
+                'layer': layer_name,
             }
         )
-        text_entity.set_pos((self.position.x(), self.position.y()), align='LEFT')
+        align: TextEntityAlignment = TextEntityAlignment.LEFT
+        text_entity.set_placement(
+            (self.start_point.x(), self.start_point.y()),
+            (self.end_point.x(), self.end_point.y()),
+            align=align
+        )
+        # text_entity.set_pos((self.position.x(), self.position.y()), align='LEFT')
 
     @classmethod
     def from_dxf(cls, entity_data: DXFText):
-        position = QPoint(entity_data.dxf.insert.x, entity_data.dxf.insert.y)
-        return cls(entity_data.dxf.text, position, entity_data.dxf.height, entity_data.dxf.rotation)
+        width = entity_data.dxf.get("width", 25)
+        rotation = entity_data.dxf.get("rotation", 0)
+        p1 = QPoint(entity_data.dxf.insert.x, entity_data.dxf.insert.y)
+        a = rotation * math.pi / 180
+        dp = QPoint(width * math.cos(a), width * math.sin(a))
+        p2 = QPoint(p1.x() + dp.x(), p1.y() + dp.y(), )
+        text_instance = cls(p1, p2, entity_data.dxf.height)
+        text_instance.text = entity_data.dxf.text
+        return text_instance
 
 
 class Dimension(Drawable):
     def __init__(self, start_point, end_point):
         self.start_point = start_point
         self.end_point = end_point
+        self.offset_distance = 25
+
+    def update(self, painter: QPainter):
+        pass
+
+    def set_last_point(self, point: QPoint):
+        self.end_point = point
 
     def contains_point(self, point):
         margin = 5
@@ -220,29 +318,45 @@ class Dimension(Drawable):
 
     def get_rotation(self):
         return math.atan2(self.start_point.y() - self.end_point.y(), self.start_point.x() - self.end_point.x())
+        # return math.atan2(self.end_point.y() - self.start_point.y(), self.start_point.x() - self.end_point.x())
+        # return math.atan2(self.end_point.y() - self.start_point.y(), self.end_point.x() - self.start_point.x())
 
     def draw(self, painter: QPainter):
-        start_point = self.offset_point(self.start_point)
-        end_point = self.offset_point(self.end_point)
+        start_point = self.offset_point(self.start_point, self.offset_distance)
+        end_point = self.offset_point(self.end_point, self.offset_distance)
+        rotation = (self.get_rotation() + math.pi) * 180 / math.pi
+        dir = -1 if 90 < rotation <= 270 else 0.5
+        text = f"{self.length():.2f} ({rotation:.2f} [{dir}])"
+        text = f"{self.length():.1f}"
+        tw, th = get_text_dimensions(painter, text)
         mid_point = QPoint(
             (start_point.x() + self.end_point.x()) / 2,
             (start_point.y() + self.end_point.y()) / 2,
         )
-        text_point = self.offset_point(mid_point, 10)
         # Placeholder for drawing dimensions; real implementation may vary
         painter.drawLine(start_point.x(), start_point.y(), end_point.x(), end_point.y())
-        painter.drawLine(start_point.x() - 2, start_point.y() + 2, start_point.x() + 2, start_point.y() - 2)
-        painter.drawLine(end_point.x() - 2, end_point.y() + 2, end_point.x() + 2, end_point.y() - 2)
         painter.drawLine(self.start_point.x(), self.start_point.y(), start_point.x(), start_point.y())
         painter.drawLine(self.end_point.x(), self.end_point.y(), end_point.x(), end_point.y())
+        pw = get_pen_width(painter)
+        set_pen_width(painter, pw * 4)
+        painter.drawLine(start_point.x() - 2, start_point.y() + 2, start_point.x() + 2, start_point.y() - 2)
+        painter.drawLine(end_point.x() - 2, end_point.y() + 2, end_point.x() + 2, end_point.y() - 2)
+        set_pen_width(painter, pw)
 
         painter.save()
-        painter.translate(text_point.x(), text_point.y())
-        painter.rotate(self.get_rotation())
+        painter.translate(mid_point.x(), mid_point.y())
+        rotation = mod(rotation + 90, 180) - 90
+        painter.rotate(rotation)
+        # painter.drawText(
+        #     0,
+        #     0,
+        #     "I__I__I",
+        # )
+        painter.translate(-tw / 2, dir * th)
         painter.drawText(
             0,
             0,
-            str(self.length()),
+            text,
         )
         painter.restore()
 
@@ -254,7 +368,9 @@ class Dimension(Drawable):
         direction_vector = QPointF(self.end_point.x() - self.start_point.x(), self.end_point.y() - self.start_point.y())
 
         # Normalize the direction vector
-        length = math.sqrt(direction_vector.x() ** 2 + direction_vector.y() ** 2)
+        length = math.hypot(direction_vector.x(), direction_vector.y())
+        if length == 0:
+            return QPoint(p.x(), p.y())
         unit_direction_vector = QPointF(direction_vector.x() / length, direction_vector.y() / length)
 
         # Calculate the perpendicular vector (rotate by 90 degrees)
@@ -289,14 +405,14 @@ class Dimension(Drawable):
     def from_dxf(cls, entity_data: DXFDimension):
         p1 = QPoint(entity_data.dxf.defpoint2.x, entity_data.dxf.defpoint2.y)
         p2 = QPoint(entity_data.dxf.defpoint3.x, entity_data.dxf.defpoint3.y)
-        print(f"entity_data.dxf.geometry: {entity_data.dxf.geometry}", flush=True)
-        print(f"entity_data.dxf.defpoint: {entity_data.dxf.defpoint}", flush=True)
-        print(f"entity_data.dxf.text_midpoint: {entity_data.dxf.text_midpoint}", flush=True)
-        print(f"entity_data.dxf.insert: {entity_data.dxf.insert}", flush=True)
-        print(f"entity_data.dxf.defpoint2: {entity_data.dxf.defpoint2}", flush=True)
-        print(f"entity_data.dxf.defpoint3: {entity_data.dxf.defpoint3}", flush=True)
-        print(f"entity_data.dxf.defpoint4: {entity_data.dxf.defpoint4}", flush=True)
-        print(f"entity_data.dxf.defpoint5: {entity_data.dxf.defpoint5}", flush=True)
+        # print(f"entity_data.dxf.geometry: {entity_data.dxf.geometry}", flush=True)
+        # print(f"entity_data.dxf.defpoint: {entity_data.dxf.defpoint}", flush=True)
+        # print(f"entity_data.dxf.text_midpoint: {entity_data.dxf.text_midpoint}", flush=True)
+        # print(f"entity_data.dxf.insert: {entity_data.dxf.insert}", flush=True)
+        # print(f"entity_data.dxf.defpoint2: {entity_data.dxf.defpoint2}", flush=True)
+        # print(f"entity_data.dxf.defpoint3: {entity_data.dxf.defpoint3}", flush=True)
+        # print(f"entity_data.dxf.defpoint4: {entity_data.dxf.defpoint4}", flush=True)
+        # print(f"entity_data.dxf.defpoint5: {entity_data.dxf.defpoint5}", flush=True)
         return cls(p1, p2)
         # start_point = QPoint(entity_data.dxf.text_midpoint.x, entity_data.dxf.text_midpoint.y)
         # end_point = QPoint(entity_data.dxf.insert.x, entity_data.dxf.insert.y)

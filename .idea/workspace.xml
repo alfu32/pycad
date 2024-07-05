@@ -4,12 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="25043644-4411-4e1b-9269-2b584d342d14" name="Changes" comment="feat(specification): &#10;&#10;consolidated requirements and functional specification&#10;before refactoring and adding new features">
-      <change afterPath="$PROJECT_DIR$/pycad/Drawable.py" afterDir="false" />
+    <list default="true" id="25043644-4411-4e1b-9269-2b584d342d14" name="Changes" comment="feat(objects): &#10;&#10;abstract drawable&#10;&#10;drawable impl:&#10;line, text, dimension">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/example.dxf" beforeDir="false" afterPath="$PROJECT_DIR$/example.dxf" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pycad/Drawable.py" beforeDir="false" afterPath="$PROJECT_DIR$/pycad/Drawable.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pycad/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/pycad/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/specification.md" beforeDir="false" afterPath="$PROJECT_DIR$/specification.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -34,21 +33,21 @@
   <component name="MarkdownSettingsMigration">
     <option name="stateVersion" value="1" />
   </component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 6
-}]]></component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 6
+}</component>
   <component name="ProjectId" id="2igLJy09i3o4CMwnGgaUPRRgXdL" />
   <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
       <recent name="C:\Users\alferio\Development\test-qtpy" />
@@ -271,7 +270,15 @@
       <option name="project" value="LOCAL" />
       <updated>1720081637411</updated>
     </task>
-    <option name="localTasksCounter" value="23" />
+    <task id="LOCAL-00023" summary="feat(objects): &#10;&#10;abstract drawable&#10;&#10;drawable impl:&#10;line, text, dimension">
+      <option name="closed" value="true" />
+      <created>1720113775643</created>
+      <option name="number" value="00023" />
+      <option name="presentableId" value="LOCAL-00023" />
+      <option name="project" value="LOCAL" />
+      <updated>1720113775643</updated>
+    </task>
+    <option name="localTasksCounter" value="24" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -289,6 +296,7 @@
     <MESSAGE value="feat(improvements): &#10;&#10;- improved optics for grid&#10;- improved layout of settings&#10;- improved interaction on layer manager" />
     <MESSAGE value="feat(improvements): &#10;&#10;- improved cursor" />
     <MESSAGE value="feat(specification): &#10;&#10;consolidated requirements and functional specification&#10;before refactoring and adding new features" />
-    <option name="LAST_COMMIT_MESSAGE" value="feat(specification): &#10;&#10;consolidated requirements and functional specification&#10;before refactoring and adding new features" />
+    <MESSAGE value="feat(objects): &#10;&#10;abstract drawable&#10;&#10;drawable impl:&#10;line, text, dimension" />
+    <option name="LAST_COMMIT_MESSAGE" value="feat(objects): &#10;&#10;abstract drawable&#10;&#10;drawable impl:&#10;line, text, dimension" />
   </component>
 </project>
