@@ -1,31 +1,24 @@
+import os
 import sys
 import math
 import time
 from typing import List
 
 import ezdxf
-from PyQt5.uic.properties import QtCore
+from PySide6 import QtWidgets
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QPushButton,
     QColorDialog, QSpinBox, QListWidget, QListWidgetItem,
-    QLineEdit, QCheckBox, QHBoxLayout, QVBoxLayout, QDialog, QRadioButton, QStyle, QLabel,
+    QLineEdit, QCheckBox, QHBoxLayout, QVBoxLayout, QDialog, QRadioButton, QStyle, QLabel, QComboBox, QSizePolicy,
+    QSpacerItem, QInputDialog,
 )
-from PySide6.QtGui import QPainter, QPen, QColor, QTransform, QMouseEvent
-from PySide6.QtCore import Qt, QPoint
+from PySide6.QtGui import QPainter, QPen, QColor, QTransform, QMouseEvent, QFontDatabase, QFont
+from PySide6.QtCore import Qt, QPoint, Signal
 from ezdxf.sections.table import (
     LayerTable, Layer
 )
 
-TOLERANCE = 2
-
-lwindex = [0, 5, 9, 13, 15, 18, 20, 25,
-           30, 35, 40, 50, 53, 60, 70, 80,
-           90, 100, 106, 120, 140, 158, 200,
-           ]
-lwrindex = {0: 0, 5: 1, 9: 2, 13: 3, 15: 4, 18: 5, 20: 5, 25: 6,
-            30: 7, 35: 8, 40: 9, 50: 10, 53: 11, 60: 12, 70: 13, 80: 13,
-            90: 14, 100: 15, 106: 16, 120: 17, 140: 18, 158: 19, 200: 20,
-            }
+from pycad.Drawable import Line, linetypes, lwrindex, dxf_app_id, lwindex, Text, Dimension, Drawable
 
 
 def round_to_nearest(value, base):
@@ -45,6 +38,9 @@ def distance(point1, point2):
 
 
 def find_nearest_point(point_list: List[QPoint], p: QPoint) -> QPoint:
+    if len(point_list) == 0:
+        return p
+
     nearest_point = point_list[0]
     min_distance = distance(point_list[0], p)
 
@@ -83,9 +79,9 @@ def split_line_by_points(line, points):
     segments = []
     start = line.start_point
     for point in points:
-        segments.append(Line(start, point, line.color, line.width))
+        segments.append(Line(start, point))
         start = point
-    segments.append(Line(start, line.end_point, line.color, line.width))
+    segments.append(Line(start, line.end_point))
     return segments
 
 
@@ -105,7 +101,7 @@ def draw_point(painter: QPainter, point: QPoint, color: int = Qt.red):
     size = 1
     pen = QPen(QColor(color), size, Qt.SolidLine)
     painter.setPen(pen)
-    painter.drawRect(x - size, y- size, 2*size,2*size)
+    painter.drawRect(x - 0.5, y - 0.5, 1.0, 1.0)
 
 
 def draw_rect(painter: QPainter, point: QPoint):
@@ -117,15 +113,15 @@ def draw_rect(painter: QPainter, point: QPoint):
     painter.drawRect(point.x() - size, point.y() - size, 2 * size, 2 * size)
 
 
-def draw_cursor(painter: QPainter, point: QPoint):
+def draw_cursor(painter: QPainter, point: QPoint, size: int):
     x = point.x()
     y = point.y()
     pen = QPen(QColor(Qt.black), 1, Qt.SolidLine)
     painter.setPen(pen)
-    size = 8
-    painter.drawLine(x - 2 * size, y, x + 2 * size, y)
-    painter.drawLine(x, y - 2 * size, x, y + 2 * size)
-    painter.drawRect(x - size / 2, y - size / 2, size, size)
+    painter.drawLine(x - 3 * size, y, x + 3 * size, y)
+    painter.drawLine(x, y - 3 * size, x, y + 3 * size)
+    painter.drawRect(x - size, y - size, 2 * size, 2 * size)
+    # painter.drawArc(x - size, y - size, 2*size, 2*size, 1, math.pi)
 
 
 def snap_to_angle(start_point, end_point):
@@ -141,77 +137,20 @@ def snap_to_angle(start_point, end_point):
     return snapped_end_point
 
 
-class Line:
-    def __init__(self, start_point, end_point, color, width):
-        self.start_point = start_point
-        self.end_point = end_point
-        self.color = color
-        self.width = width
-
-    def contains_point(self, point):
-        margin = 5
-        x1, y1 = self.start_point.x(), self.start_point.y()
-        x2, y2 = self.end_point.x(), self.end_point.y()
-        xp, yp = point.x(), point.y()
-
-        if min(x1, x2) - margin <= xp <= max(x1, x2) + margin and min(y1, y2) - margin <= yp <= max(y1, y2) + margin:
-            distance = abs((y2 - y1) * xp - (x2 - x1) * yp + x2 * y1 - y2 * x1) / math.hypot(y2 - y1, x2 - x1)
-            return distance <= margin
-        return False
-
-    def intersect(self, other):
-        def ccw(A, B, C):
-            return (C.y() - A.y()) * (B.x() - A.x()) > (B.y() - A.y()) * (C.x() - A.x())
-
-        A = self.start_point
-        B = self.end_point
-        C = other.start_point
-        D = other.end_point
-
-        if ccw(A, C, D) != ccw(B, C, D) and ccw(A, B, C) != ccw(A, B, D):
-            denom = (A.x() - B.x()) * (C.y() - D.y()) - (A.y() - B.y()) * (C.x() - D.x())
-            if denom == 0:
-                return None
-            intersect_x = ((A.x() * B.y() - A.y() * B.x()) * (C.x() - D.x()) - (A.x() - B.x()) * (
-                    C.x() * D.y() - C.y() * D.x())) / denom
-            intersect_y = ((A.x() * B.y() - A.y() * B.x()) * (C.y() - D.y()) - (A.y() - B.y()) * (
-                    C.x() * D.y() - C.y() * D.x())) / denom
-            return QPoint(intersect_x, intersect_y)
-        return None
-
-    def _points_equal(self, p1, p2):
-        return abs(p1.x() - p2.x()) <= TOLERANCE and abs(p1.y() - p2.y()) <= TOLERANCE
-
-    def is_short(self, threshold=1.0):
-        length = math.hypot(self.start_point.x() - self.end_point.x(), self.start_point.y() - self.end_point.y())
-        return length < threshold
-
-    def __eq__(self, other):
-        if not isinstance(other, Line):
-            return False
-        return (self._points_equal(self.start_point, other.start_point) and self._points_equal(self.end_point,
-                                                                                               other.end_point)) or \
-            (self._points_equal(self.start_point, other.end_point) and self._points_equal(self.end_point,
-                                                                                          other.start_point))
-
-    def __hash__(self):
-        start_tuple = (self.start_point.x(), self.start_point.y())
-        end_tuple = (self.end_point.x(), self.end_point.y())
-        return hash((min(start_tuple, end_tuple), max(start_tuple, end_tuple)))
-
-
 class LayerModel:
     def __init__(self, name="Layer", color=QColor(Qt.black), width=2, visible=True):
+        self.linetype = "Continuous"
         self.name = name
         self.color = color
-        self.width = width
+        self.lineweight = width
         self.visible = visible
-        self.lines = []
+        self.drawables = []
         self.flAutoCut = False
 
-    def add_line(self, line):
-        self.lines.append(line)
-        self.cleanup()
+    def add_drawable(self, line: Line):
+        self.drawables.append(line)
+        if isinstance(line, Line):
+            self.cleanup()
 
     def cleanup(self):
         if self.flAutoCut:
@@ -221,8 +160,8 @@ class LayerModel:
 
     def rescan_intersections(self):
         intersection_table = []
-        for i, line1 in enumerate(self.lines):
-            for j, line2 in enumerate(self.lines):
+        for i, line1 in enumerate(self.drawables):
+            for j, line2 in enumerate(self.drawables):
                 if i < j:
                     intersect_point = line1.intersect(line2)
                     if intersect_point:
@@ -237,32 +176,33 @@ class LayerModel:
 
         new_lines = []
         for line_idx, intersect_points in intersection_groups.items():
-            line = self.lines[line_idx]
+            line = self.drawables[line_idx]
             sorted_points = sort_points_on_line(line, intersect_points)
             new_lines.extend(split_line_by_points(line, sorted_points))
 
-        self.lines = [line for idx, line in enumerate(self.lines) if idx not in intersection_groups]
-        self.lines.extend(new_lines)
+        self.drawables = [line for idx, line in enumerate(self.drawables) if idx not in intersection_groups]
+        self.drawables.extend(new_lines)
 
     def cleanup_duplicates(self):
-        unique_lines = set(self.lines)
-        self.lines = list(unique_lines)
+        unique_lines = set(self.drawables)
+        self.drawables = list(unique_lines)
 
     def remove_short_lines(self):
-        self.lines = [line for line in self.lines if not line.is_short()]
+        self.drawables = [line for line in self.drawables if not line.is_empty()]
 
 
 class DrawingManager(QWidget):
+    changed = Signal(object)  # Define a custom signal with a generic object type
+
     def __init__(self):
         super().__init__()
         self.setMouseTracking(True)
         self.setCursor(Qt.BlankCursor)
-        self.layers = [LayerModel(name="Layer-0")]
+        self.layers = [LayerModel(name="0")]
         self.current_layer_index = 0
-        self.current_line = None
+        self.current_drawable: Drawable = None
         self.zoom_factor = 1.0
         self.offset = QPoint(0, 0)
-        self.dxf_file = None
         self.flSnapGrid = True
         self.gridSpacing = QPoint(25, 25)
         self.flSnapPoints = True
@@ -271,72 +211,26 @@ class DrawingManager(QWidget):
         self.model_point_raw = QPoint(0, 0)
         self.screen_point_raw = QPoint(0, 0)
         self.screen_point_snapped = QPoint(0, 0)
+        self.mode = "line"  # Default mode
+        self.font_family = "Arial"  # Default mode
+
+    def set_mode(self, mode):
+        self.mode = mode
 
     def set_current_layer(self, index):
         self.current_layer_index = index
+        self.changed.emit(self.layers)
 
     def add_layer(self, layer):
         self.layers.append(layer)
+        self.changed.emit(self.layers)
 
     def remove_layer(self, index):
         if len(self.layers) > 1:
             del self.layers[index]
             if self.current_layer_index >= len(self.layers):
                 self.current_layer_index = len(self.layers) - 1
-            self.save_dxf()
-
-    def load_dxf(self, file_path):
-        self.layers = []
-        doc = ezdxf.readfile(file_path)
-        doc_layers: LayerTable = doc.layers
-        for dxf_layer in doc_layers:
-            color = QColor(get_true_color(dxf_layer))
-            width0 = dxf_layer.dxf.lineweight if dxf_layer.dxf.hasattr('lineweight') else 1
-            width = lwrindex[width0] if width0 >= 0 else lwrindex[5]
-            layer = LayerModel(name=dxf_layer.dxf.name, color=color, width=width,
-                               visible=True)
-            self.layers.append(layer)
-
-        for entity in doc.entities:
-            if entity.dxftype() == 'LINE':
-                start_point = QPoint(entity.dxf.start.x, entity.dxf.start.y)
-                end_point = QPoint(entity.dxf.end.x, entity.dxf.end.y)
-                color = QColor(entity.dxf.color) if entity.dxf.hasattr('color') else QColor(Qt.black)
-                width = entity.dxf.lineweight if entity.dxf.hasattr('lineweight') else 1
-                line = Line(start_point, end_point, color, width)
-                layer_name = entity.dxf.layer
-                for layer in self.layers:
-                    if layer.name == layer_name:
-                        layer.add_line(line)
-                        break
-
-        self.current_layer_index = 0
-
-    def save_dxf(self):
-        if not self.dxf_file:
-            timestamp = time.strftime("%Y%m%d-%H%M%S")
-            self.dxf_file = f"drawing_{timestamp}.dxf"
-
-        doc = ezdxf.new()
-        for index, layer in enumerate(self.layers):
-            if layer.name != '0' and layer.name != 'Defpoints':
-                doc.layers.add(
-                    name=layer.name,
-                    true_color=qcolor_to_dxf_color(layer.color),
-                    lineweight=lwindex[layer.width]
-                )
-            for line in layer.lines:
-                doc.modelspace().add_line(
-                    (line.start_point.x(), line.start_point.y()),
-                    (line.end_point.x(), line.end_point.y()),
-                    dxfattribs={
-                        'layer': layer.name,
-                        'color': qcolor_to_dxf_color(layer.color),
-                        'lineweight': lwindex[layer.width]
-                    }
-                )
-
-        doc.saveas(self.dxf_file)
+            self.changed.emit(self.layers)
 
     def wheelEvent(self, event):
         mouse_pos = event.position().toPoint()
@@ -388,59 +282,78 @@ class DrawingManager(QWidget):
         self.model_point_snapped = self.apply_mouse_input_modifiers(self.model_point_raw)
         self.screen_point_snapped = self.map_to_view(self.model_point_snapped)
 
+    def create_drawable(self, p1: QPoint, p2: QPoint) -> Drawable:
+        if self.mode == 'line':
+            return Line(p1, p2)
+        elif self.mode == 'text':
+            t = Text(p1, p2, 25, "I__________I")
+            return t
+        elif self.mode == 'dimension':
+            return Dimension(p1, p2)
+
     def mousePressEvent(self, event: QMouseEvent):
         self.update_mouse_positions(event)
         if event.button() == Qt.LeftButton:
-            layer = self.layers[self.current_layer_index]
-            self.current_line = Line(self.model_point_snapped, self.model_point_snapped, layer.color, layer.width)
+            layer = self.current_layer()
+            self.current_drawable = self.create_drawable(
+                self.model_point_snapped,
+                self.model_point_snapped,
+            )
         elif event.button() == Qt.RightButton:
-            clayer = self.current_layer()
-            for line in clayer.lines:
+            layer = self.current_layer()
+            for line in layer.drawables:
                 if line.contains_point(self.model_point_raw):
-                    clayer.lines.remove(line)
+                    layer.drawables.remove(line)
                     self.update()
-                    self.save_dxf()
-                    return
+        self.changed.emit(self.layers)
 
     def mouseMoveEvent(self, event):
         self.update_mouse_positions(event)
-        if self.current_line:
+        if self.current_drawable:
             end_point = self.model_point_snapped
             if event.modifiers() & Qt.ControlModifier:
-                end_point = snap_to_angle(self.current_line.start_point, end_point)
-            self.current_line.end_point = end_point
+                end_point = snap_to_angle(self.current_drawable.start_point, end_point)
+            self.current_drawable.end_point = end_point
             # Update line color and width to match the current layer
             layer = self.layers[self.current_layer_index]
-            self.current_line.color = layer.color
-            self.current_line.width = layer.width
+            self.current_drawable.color = layer.color
+            self.current_drawable.width = layer.lineweight
         self.update()
 
     def mouseReleaseEvent(self, event):
         self.update_mouse_positions(event)
-        if self.current_line:
+        if self.current_drawable:
             end_point = self.model_point_snapped
             if event.modifiers() & Qt.ControlModifier:
-                end_point = snap_to_angle(self.current_line.start_point, end_point)
-            self.current_line.end_point = end_point
-            self.layers[self.current_layer_index].add_line(self.current_line)
-            self.current_line = None
-            self.save_dxf()
+                end_point = snap_to_angle(self.current_drawable.start_point, end_point)
+            self.current_drawable.end_point = end_point
+            if isinstance(self.current_drawable, Text):
+                text, ok = QInputDialog.getText(self, 'Text', ':')
+                self.current_drawable.text = text
+            self.layers[self.current_layer_index].add_drawable(self.current_drawable)
+            self.current_drawable = None
+        self.changed.emit(self.layers)
         self.update()
 
     def paintEvent(self, event):
         painter: QPainter = QPainter(self)
+        font = QFont(self.font_family, 12)  # 12 is the font size
+        painter.setFont(font)
 
         # Draw endpoint markers
         for layer in self.layers:
             if not layer.visible:
                 continue
-            for line in layer.lines:
-                draw_rect(painter, self.map_to_view(line.start_point))
-                draw_rect(painter, self.map_to_view(line.end_point))
+            for drawable in layer.drawables:
+                drawable.update(painter)
+                draw_rect(painter, self.map_to_view(drawable.start_point))
+                if isinstance(drawable.end_point, QPoint):
+                    draw_rect(painter, self.map_to_view(drawable.end_point))
 
-        if self.current_line:
-            draw_rect(painter, self.map_to_view(self.current_line.start_point))
-            draw_rect(painter, self.map_to_view(self.current_line.end_point))
+        if self.current_drawable:
+            draw_rect(painter, self.map_to_view(self.current_drawable.start_point))
+            if isinstance(drawable.end_point, QPoint):
+                draw_rect(painter, self.map_to_view(drawable.end_point))
 
         transform = QTransform()
         transform.translate(self.offset.x(), self.offset.y())
@@ -450,25 +363,29 @@ class DrawingManager(QWidget):
         for layer in self.layers:
             if not layer.visible:
                 continue
-            for line in layer.lines:
-                pen = QPen(layer.color, layer.width / self.zoom_factor, Qt.SolidLine)
-                painter.setPen(pen)
-                painter.drawLine(line.start_point, line.end_point)
-        if self.current_line:
-            pen = QPen(self.current_layer().color, self.current_layer().width / self.zoom_factor, Qt.SolidLine)
+            pen = QPen(layer.color, layer.lineweight / self.zoom_factor, Qt.SolidLine)
+            pen.setDashPattern(linetypes[layer.linetype])
             painter.setPen(pen)
-            painter.drawLine(self.current_line.start_point, self.current_line.end_point)
+            for drawable in layer.drawables:
+                drawable.draw(painter)
+        if self.current_drawable:
+            layer = self.current_layer()
+            pen = QPen(self.current_layer().color, self.current_layer().lineweight / self.zoom_factor, Qt.SolidLine)
+
+            pen.setDashPattern(linetypes[layer.linetype])
+            painter.setPen(pen)
+            self.current_drawable.draw(painter)
 
         if self.flSnapGrid:
-            self.draw_local_grid(painter, self.screen_point_snapped)
+            self.draw_local_grid(painter, self.model_point_snapped, 0x8888887f)
         # Reset transformation to draw crosses in screen coordinates
         painter.setTransform(QTransform())
-        draw_cursor(painter, self.screen_point_snapped)
+        draw_cursor(painter, self.screen_point_snapped, self.snapDistance)
 
     def get_all_points(self):
         points = []
         for layer in self.layers:
-            for line in layer.lines:
+            for line in layer.drawables:
                 points.append(line.start_point)
                 points.append(line.end_point)
         return points
@@ -476,11 +393,11 @@ class DrawingManager(QWidget):
     def get_all_lines(self):
         lines = []
         for layer in self.layers:
-            for line in layer.lines:
+            for line in layer.drawables:
                 lines.append(line)
         return lines
 
-    def draw_local_grid(self, painter: QPainter, center: QPoint):
+    def draw_local_grid(self, painter: QPainter, center: QPoint, color: int):
         dx = self.gridSpacing.x()
         dy = self.gridSpacing.y()
         NX = dx * 40
@@ -489,13 +406,15 @@ class DrawingManager(QWidget):
         cy = round(center.y() / NY) * NY
         for ix in range(26):
             for iy in range(26):
-                draw_point(painter, QPoint(cx + ix * dx, cy + iy * dy), Qt.black)
-                draw_point(painter, QPoint(cx + ix * dx, cy - iy * dy), Qt.black)
-                draw_point(painter, QPoint(cx - ix * dx, cy + iy * dy), Qt.black)
-                draw_point(painter, QPoint(cx - ix * dx, cy - iy * dy), Qt.black)
+                draw_point(painter, QPoint(cx + ix * dx, cy + iy * dy), color)
+                draw_point(painter, QPoint(cx + ix * dx, cy - iy * dy), color)
+                draw_point(painter, QPoint(cx - ix * dx, cy + iy * dy), color)
+                draw_point(painter, QPoint(cx - ix * dx, cy - iy * dy), color)
 
 
 class LayerItem(QWidget):
+    changed = Signal(object)  # Define a custom signal with a generic object type
+
     def __init__(self, layer, parent=None):
         super().__init__(parent)
         self.layer = layer
@@ -513,13 +432,13 @@ class LayerItem(QWidget):
         layout.addWidget(self.name_input)
 
         self.width_input = QSpinBox()
-        self.width_input.setValue(self.layer.width)
+        self.width_input.setValue(self.layer.lineweight)
         self.width_input.valueChanged.connect(self.on_width_changed)
         layout.addWidget(self.width_input)
 
         self.color_button = QPushButton()
         self.color_button.setStyleSheet(f"background-color: {self.layer.color.name()}")
-        self.color_button.clicked.connect(self.select_color)
+        self.color_button.clicked.connect(self.on_select_color)
         layout.addWidget(self.color_button)
 
         self.visibility_label = QLabel()
@@ -531,14 +450,22 @@ class LayerItem(QWidget):
         self.visibility_checkbox.stateChanged.connect(self.on_visibility_changed)
         layout.addWidget(self.visibility_checkbox)
 
-        self.visibility_label = QLabel()
-        self.visibility_label.setText("auto-cut")
-        layout.addWidget(self.visibility_label)
+        self.autocut_label = QLabel()
+        self.autocut_label.setText("auto-cut")
+        layout.addWidget(self.autocut_label)
 
         self.autocut_checkbox = QCheckBox()
-        self.autocut_checkbox.setChecked(self.layer.visible)
+        self.autocut_checkbox.setChecked(self.layer.flAutoCut)
         self.autocut_checkbox.stateChanged.connect(self.on_autocut_changed)
         layout.addWidget(self.autocut_checkbox)
+
+        # Add linetype combo box
+        self.linetype_combo = QComboBox()
+        self.linetype_combo.addItems(linetypes.keys())
+        self.linetype_combo.setCurrentText(self.layer.linetype)
+        self.linetype_combo.currentIndexChanged.connect(self.on_linetype_changed)
+        # layout.addWidget(QLabel("Linetype:"))
+        layout.addWidget(self.linetype_combo)
 
         self.remove_button = QPushButton("Remove")
         self.remove_button.clicked.connect(self.on_remove_clicked)
@@ -546,35 +473,54 @@ class LayerItem(QWidget):
 
         self.setLayout(layout)
 
+    def emit_changed(self):
+        self.changed.emit(self.layer)  # Emit the changed signal with the layer data model
+        # QApplication.processEvents()  # Process any pending events
+
     def on_radio_button_toggled(self, checked):
         if checked:
             index = self.parent.canvas.layers.index(self.layer)
             self.parent.canvas.set_current_layer(index)
             self.parent.update_layer_list()
+        self.emit_changed()
 
     def on_name_changed(self, text):
         self.layer.name = text
+        self.emit_changed()
 
     def on_width_changed(self, value):
-        self.layer.width = value
+        self.layer.lineweight = value
+        self.emit_changed()
 
-    def select_color(self):
+    def on_select_color(self):
         color = QColorDialog.getColor(self.layer.color, self)
         if color.isValid():
             self.layer.color = color
             self.color_button.setStyleSheet(f"background-color: {self.layer.color.name()}")
+            self.emit_changed()
 
     def on_visibility_changed(self, state):
         self.layer.visible = bool(state)
+        self.emit_changed()
 
     def on_autocut_changed(self, state):
         self.layer.flAutoCut = bool(state)
+        self.emit_changed()
+
+    def on_linetype_changed(self, index):
+        linetype = self.linetype_combo.currentText()
+        self.layer.linetype = linetype
+        self.emit_changed()
 
     def on_remove_clicked(self):
         self.parent.remove_layer(self.layer)
+        self.emit_changed()
 
 
 class LayerManager(QDialog):
+    changed = Signal(object)  # Define a custom signal with a generic object type
+    closed = Signal(bool)  # Define a custom signal with a generic object type
+
     def __init__(self, canvas, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Layer Manager")
@@ -592,11 +538,16 @@ class LayerManager(QDialog):
         self.setLayout(layout)
         self.update_layer_list()
 
+    def emit_change(self):
+        self.changed.emit(self.layer_list)
+        # QApplication.processEvents()
+
     def update_layer_list(self):
         self.layer_list.clear()
         for i, layer in enumerate(self.canvas.layers):
             item = QListWidgetItem()
             widget = LayerItem(layer, self)
+            widget.changed.connect(self.on_layer_changed)
             item.setSizeHint(widget.sizeHint())
             self.layer_list.addItem(item)
             self.layer_list.setItemWidget(item, widget)
@@ -606,33 +557,54 @@ class LayerManager(QDialog):
         new_layer = LayerModel(name=new_layer_name)
         self.canvas.add_layer(new_layer)
         self.update_layer_list()
+        # print(f"add_layer {new_layer.name}", flush=True)
+        self.emit_change()
 
     def remove_layer(self, layer):
         index = self.canvas.layers.index(layer)
         self.canvas.remove_layer(index)
         self.update_layer_list()
+        # print(f"remove_layer {layer.name}", flush=True)
+        self.emit_change()
+
+    def on_layer_changed(self, layer):
+        # print(f"child layer changed {layer.name}", flush=True)
+        # Handle the layer data change here
+        self.emit_change()
+
+    def closeEvent(self, event):
+        self.closed.emit(True)
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, file_path=None):
+    def __init__(self, file: str, temp: str):
         super().__init__()
+        self.font_family = "Arial"
+        self.dxf_file = file
+        self.temp_file = temp
         self.grid_snap_x: QSpinBox = None
         self.grid_snap_y: QSpinBox = None
         self.snap_distance: QSpinBox = None
-        self.setWindowTitle("PyCAD 14")
+        self.layout_man_button: QPushButton = None
         self.setGeometry(100, 100, 800, 600)  # Initial window size
         self.drawing_manager = DrawingManager()
-        self.drawing_manager.setStyleSheet("background-color: black;")
-        if file_path:
-            self.drawing_manager.load_dxf(file_path)
-            self.drawing_manager.dxf_file = file_path
+        self.drawing_manager.changed.connect(self.on_model_changed)
         self.layer_manager = LayerManager(self.drawing_manager)
         self.layer_manager.setMaximumWidth(720)
         self.layer_manager.setMinimumWidth(640)
         self.layer_manager.setMaximumHeight(720)
         self.layer_manager.setMinimumHeight(480)
+        self.layer_manager.changed.connect(self.on_layers_changed)
+        self.layer_manager.closed.connect(self.on_layer_manager_closed)
         self.layer_manager.show()  # Show the layer manager as a non-blocking modal
+
+        self.line_mode_button: QPushButton = None
+        self.dimension_mode_button: QPushButton = None
+        self.text_mode_button: QPushButton = None
+
         self.init_ui()
+        self.load_dxf(file)
+        self.setWindowTitle(f"PyCAD 14 - {self.dxf_file}")
 
     def on_grid_snap_changed(self, checked):
         self.drawing_manager.flSnapGrid = bool(checked)
@@ -654,53 +626,90 @@ class MainWindow(QMainWindow):
         self.drawing_manager.snapDistance = value
         self.statusBar().showMessage(f"snap_grid.y is {self.drawing_manager.snapDistance}")
 
+    def on_layers_changed(self, layers):
+        # print("layers changed", flush=True)
+        # print(f"{layers}", flush=True)
+        self.save_dxf(self.temp_file)
+
+    def on_model_changed(self, model):
+        # print("model changed", flush=True)
+        # print(f"{model}", flush=True)
+        self.save_dxf(self.temp_file)
+
+    def on_layer_manager_closed(self, value):
+        self.layout_man_button.setEnabled(value)
+
     def init_ui(self):
+
+        # Load custom font
+        font_path = "./Bahnschrift-Font-Family/BAHNSCHRIFT.TTF"
+        font_id = QFontDatabase.addApplicationFont(font_path)
+        if font_id != -1:
+            print(f"font {font_path} found", flush=True)
+            self.drawing_manager.font_family = QFontDatabase.applicationFontFamilies(font_id)[0]
+        else:
+            print(f"font {font_path} not found", flush=True)
+            self.drawing_manager.font_family = "Arial"  # Fallback font
         main_layout = QVBoxLayout()
+        size_policy = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
 
         # Add buttons and checkboxes
         control_layout = QHBoxLayout()
-
-        grid_snap_checkbox = QCheckBox("Grid Snap")
-        grid_snap_checkbox.setChecked(True)
-        grid_snap_checkbox.stateChanged.connect(self.on_grid_snap_changed)
-        control_layout.addWidget(grid_snap_checkbox)
-
-        grid_snap_x_label = QLabel()
-        grid_snap_x_label.setText("X")
-        control_layout.addWidget(grid_snap_x_label)
-
-        self.grid_snap_x = QSpinBox()
-        self.grid_snap_x.setValue(self.drawing_manager.gridSpacing.x())
-        self.grid_snap_x.valueChanged.connect(self.on_grid_spacing_x_changed)
-        control_layout.addWidget(self.grid_snap_x)
-
-        grid_snap_y_label = QLabel()
-        grid_snap_y_label.setText("Y")
-        control_layout.addWidget(grid_snap_y_label)
-
-        self.grid_snap_y = QSpinBox()
-        self.grid_snap_y.setValue(self.drawing_manager.gridSpacing.x())
-        self.grid_snap_y.valueChanged.connect(self.on_grid_spacing_y_changed)
-        control_layout.addWidget(self.grid_snap_y)
-
-        grid_snap_checkbox = QCheckBox("Grid Snap")
-        grid_snap_checkbox.setChecked(True)
-        grid_snap_checkbox.stateChanged.connect(self.on_grid_snap_changed)
-        control_layout.addWidget(grid_snap_checkbox)
+        control_layout.setAlignment(Qt.AlignLeft)
 
         vertex_snap_checkbox = QCheckBox("Vertex Snap")
         vertex_snap_checkbox.setChecked(True)
         vertex_snap_checkbox.stateChanged.connect(self.on_vertex_snap_changed)
         control_layout.addWidget(vertex_snap_checkbox)
 
-        snap_distance_label = QLabel()
-        snap_distance_label.setText("snap distance")
-        control_layout.addWidget(snap_distance_label)
+        grid_snap_checkbox = QCheckBox("Grid Snap")
+        grid_snap_checkbox.setChecked(True)
+        grid_snap_checkbox.stateChanged.connect(self.on_grid_snap_changed)
+        control_layout.addWidget(grid_snap_checkbox)
+
+        control_layout.addWidget(QLabel("grid spacing X"))
+
+        self.grid_snap_x = QSpinBox()
+        self.grid_snap_x.setValue(self.drawing_manager.gridSpacing.x())
+        self.grid_snap_x.valueChanged.connect(self.on_grid_spacing_x_changed)
+        control_layout.addWidget(self.grid_snap_x)
+
+        control_layout.addWidget(QLabel("Y"))
+
+        self.grid_snap_y = QSpinBox()
+        self.grid_snap_y.setValue(self.drawing_manager.gridSpacing.x())
+        self.grid_snap_y.valueChanged.connect(self.on_grid_spacing_y_changed)
+        control_layout.addWidget(self.grid_snap_y)
+
+        control_layout.addWidget(QLabel("snap distance"))
 
         self.snap_distance = QSpinBox()
         self.snap_distance.setValue(self.drawing_manager.snapDistance)
         self.snap_distance.valueChanged.connect(self.on_grid_snap_distance_changed)
         control_layout.addWidget(self.snap_distance)
+
+        control_layout.addItem(QSpacerItem(40, 20, size_policy.horizontalPolicy(), size_policy.verticalPolicy()))
+
+        self.layout_man_button = QPushButton("Layers")
+        self.layout_man_button.clicked.connect(self.show_layers)
+        self.layout_man_button.setEnabled(False)
+        control_layout.addWidget(self.layout_man_button)
+
+        self.line_mode_button = QPushButton("Line")
+        self.line_mode_button.setCheckable(True)
+        self.line_mode_button.setChecked(True)
+        self.line_mode_button.clicked.connect(self.set_line_mode)
+        control_layout.addWidget(self.line_mode_button)
+
+        self.dimension_mode_button = QPushButton("Dimension")
+        self.dimension_mode_button.setCheckable(True)
+        self.dimension_mode_button.clicked.connect(self.set_dimension_mode)
+        control_layout.addWidget(self.dimension_mode_button)
+
+        self.text_mode_button = QPushButton("Text")
+        self.text_mode_button.setCheckable(True)
+        self.text_mode_button.clicked.connect(self.set_text_mode)
+        control_layout.addWidget(self.text_mode_button)
 
         main_layout.addLayout(control_layout)
         main_layout.addWidget(self.drawing_manager)
@@ -715,14 +724,133 @@ class MainWindow(QMainWindow):
         self.layer_manager.layer_list.setCurrentRow(0)
         self.drawing_manager.set_current_layer(0)
 
+    def set_line_mode(self):
+        self.statusBar().showMessage("Mode: line")
+        self.drawing_manager.set_mode("line")
+        self.line_mode_button.setChecked(True)
+        self.dimension_mode_button.setChecked(False)
+        self.text_mode_button.setChecked(False)
+
+    def set_dimension_mode(self):
+        self.statusBar().showMessage("Mode: dimension")
+        self.drawing_manager.set_mode("dimension")
+        self.line_mode_button.setChecked(False)
+        self.dimension_mode_button.setChecked(True)
+        self.text_mode_button.setChecked(False)
+
+    def set_text_mode(self):
+        self.statusBar().showMessage("Mode: text")
+        self.drawing_manager.set_mode("text")
+        self.line_mode_button.setChecked(False)
+        self.dimension_mode_button.setChecked(False)
+        self.text_mode_button.setChecked(True)
+
+    def show_layers(self):
+
+        self.layout_man_button.setEnabled(False)
+        self.layer_manager.show()
+
     def closeEvent(self, event):
+        self.save_dxf(self.dxf_file)
         self.layer_manager.close()
         event.accept()
+        os.unlink(self.temp_file)
+
+    def load_dxf(self, filename):
+        self.drawing_manager.layers = []
+        self.layer_manager.layers = []
+        doc = ezdxf.readfile(filename)
+        doc_layers: LayerTable = doc.layers
+        for dxf_layer in doc_layers:
+            color = QColor(get_true_color(dxf_layer))
+            width0 = dxf_layer.dxf.lineweight if dxf_layer.dxf.hasattr('lineweight') else 1
+            width = lwrindex[width0] if width0 >= 0 else lwrindex[5]
+            linetype = dxf_layer.dxf.get('linetype', 'Continuous')
+            # print(f"layer {dxf_layer.dxf.name} has linetype {linetype}", flush=True)
+
+            layer = LayerModel(name=dxf_layer.dxf.name, color=color, width=width,
+                               visible=True)
+            layer.linetype = dxf_layer.dxf.get('linetype', 'Continuous')
+            # Read XDATA
+            if dxf_layer.has_xdata(dxf_app_id):
+                xdata = dxf_layer.get_xdata(dxf_app_id)
+                for code, value in xdata:
+                    if code == 1000 and value == "autocut":
+                        # print(f"Layer {layer.name} has autocut set to: {value}", flush=True)
+                        pass
+                    if code == 1070:
+                        # print(f"Layer {layer.name} integer value to: {value}", flush=True)
+                        layer.flAutoCut = True if value == 1 else False
+                    else:
+                        layer.flAutoCut = False
+
+            self.layer_manager.layers.append(layer)
+            self.drawing_manager.layers.append(layer)
+
+        for entity in doc.entities:
+            drawable = None
+            if entity.dxftype() == 'LINE':
+                start_point = QPoint(entity.dxf.start.x, entity.dxf.start.y)
+                end_point = QPoint(entity.dxf.end.x, entity.dxf.end.y)
+                color = QColor(entity.dxf.color) if entity.dxf.hasattr('color') else QColor(Qt.black)
+                width = entity.dxf.lineweight if entity.dxf.hasattr('lineweight') else 1
+                drawable = Line(start_point, end_point)
+            elif entity.dxftype() == 'TEXT':
+                drawable = Text.from_dxf(entity)
+            elif entity.dxftype() == 'DIMENSION':
+                drawable = Dimension.from_dxf(entity)
+            layer_name = entity.dxf.layer
+            if drawable:
+                for layer in self.drawing_manager.layers:
+                    if layer is not None and layer.name is not None and layer.name == layer_name:
+                        layer.add_drawable(drawable)
+                        break
+
+        self.layer_manager.current_layer_index = 0
+        self.drawing_manager.update()
+        self.layer_manager.update_layer_list()
+
+    def save_dxf(self, filename):
+
+        doc: ezdxf.drawing.Drawing = ezdxf.new()
+
+        if not doc.appids.has_entry(dxf_app_id):
+            doc.appids.new(dxf_app_id)
+
+        for linetype in linetypes:
+            if linetype != "Continuous":
+                if not doc.linetypes.has_entry(linetype):
+                    doc.linetypes.new(linetype, dxfattribs={'description': linetype, 'pattern': linetypes[linetype]})
+
+        for index, layer in enumerate(self.drawing_manager.layers):
+            if layer.name != '0' and layer.name != 'Defpoints':
+                dxf_layer = doc.layers.new(
+                    name=layer.name,
+                    dxfattribs={
+                        "true_color": qcolor_to_dxf_color(layer.color),
+                        "lineweight": lwindex[layer.lineweight],
+                        "linetype": layer.linetype,
+                    }
+                )
+                # Add XDATA to the layer
+                xdata = [
+                    (1001, dxf_app_id),
+                    (1000, "autocut"),
+                    (1070, 1 if layer.flAutoCut else 0),
+                ]
+                dxf_layer.set_xdata(dxf_app_id, xdata)
+            for drawable in layer.drawables:
+                drawable.save_to_dxf(doc, layer_name=layer.name)
+
+        doc.saveas(filename)
 
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    file_path = sys.argv[1] if len(sys.argv) > 1 else None
-    window = MainWindow(file_path)
+    timestamp = time.strftime("%Y%m%d-%H%M%S")
+    default_file = f"drawing_{timestamp}.dxf"
+    file_path = sys.argv[1] if len(sys.argv) > 1 else default_file
+    temp_file = f"temp_{timestamp}_{file_path}"
+    window = MainWindow(file_path, temp_file)
     window.show()
     sys.exit(app.exec())
