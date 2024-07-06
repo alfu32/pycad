@@ -1,5 +1,7 @@
 # PyQt Drawing Application Specification
 
+![pycad24-r1.4.0](./pycad24_1.png)
+
 ## High-Level Overview
 
 This application is a PyQt-based drawing tool that allows users to draw lines on a canvas. The application supports multiple layers, each with its own properties such as color, line width, and visibility. Users can manage these layers using a non-blocking modal layer manager. Lines drawn on the canvas are stored within the respective layers, and intersections are handled within each layer to split lines at intersection points. The application also provides functionality to add, delete, and manage layers, ensuring that the layers list cannot be empty and the first layer is selected by default.
