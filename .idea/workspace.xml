@@ -5,10 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="25043644-4411-4e1b-9269-2b584d342d14" name="Changes" comment="feat(objects): &#10;&#10;abstract drawable&#10;&#10;drawable impl:&#10;line, text, dimension">
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/example.dxf" beforeDir="false" afterPath="$PROJECT_DIR$/example.dxf" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pycad/Drawable.py" beforeDir="false" afterPath="$PROJECT_DIR$/pycad/Drawable.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pycad/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/pycad/main.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -30,6 +29,9 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="GoLibraries">
+    <option name="indexEntireGoPath" value="true" />
+  </component>
   <component name="MarkdownSettingsMigration">
     <option name="stateVersion" value="1" />
   </component>
@@ -42,12 +44,23 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.go.formatter.settings.were.checked": "true",
+    "RunOnceActivity.go.migrated.go.modules.settings": "true",
+    "git-widget-placeholder": "work",
+    "go.import.settings.migrated": "true",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "/home/alfu64/Development/test-qtpy",
+    "nodejs_package_manager_path": "npm",
+    "project.structure.last.edited": "Project",
+    "project.structure.proportion": "0.0",
+    "project.structure.side.proportion": "0.4597701",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
       <recent name="C:\Users\alferio\Development\test-qtpy" />
@@ -68,6 +81,7 @@
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
       <option name="SCRIPT_NAME" value="C:\Users\alferio\Development\test-qtpy\pycad\main.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
@@ -81,7 +95,8 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-python-sdk-09665e90c3a7-d3b881c8e49f-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-233.15026.15" />
+        <option value="bundled-jdk-9f38398b9061-39b83d9b5494-intellij.indexing.shared.core-IU-241.18034.62" />
+        <option value="bundled-js-predefined-1d06a55b98c1-0b3e54e931b4-JavaScript-IU-241.18034.62" />
       </set>
     </attachedChunks>
   </component>
@@ -93,6 +108,8 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1719907205759</updated>
+      <workItem from="1720215941754" duration="72000" />
+      <workItem from="1720216074165" duration="36000" />
     </task>
     <task id="LOCAL-00001" summary="feat(init)">
       <option name="closed" value="true" />
@@ -281,6 +298,10 @@
     <option name="localTasksCounter" value="24" />
     <servers />
   </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="V Toolchain" url="$USER_HOME$/Downloads/v_linux/v-0.4.0" />
   <component name="VcsManagerConfiguration">
     <MESSAGE value="feat(init)" />
     <MESSAGE value="feat(zoom):" />
@@ -298,5 +319,9 @@
     <MESSAGE value="feat(specification): &#10;&#10;consolidated requirements and functional specification&#10;before refactoring and adding new features" />
     <MESSAGE value="feat(objects): &#10;&#10;abstract drawable&#10;&#10;drawable impl:&#10;line, text, dimension" />
     <option name="LAST_COMMIT_MESSAGE" value="feat(objects): &#10;&#10;abstract drawable&#10;&#10;drawable impl:&#10;line, text, dimension" />
+  </component>
+  <component name="VgoProject">
+    <integration-enabled>false</integration-enabled>
+    <settings-migrated>true</settings-migrated>
   </component>
 </project>

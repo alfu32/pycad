@@ -2,7 +2,7 @@ import os
 import sys
 import math
 import time
-from typing import List
+from typing import List, Tuple, overload
 
 import ezdxf
 from PySide6 import QtWidgets
@@ -13,12 +13,13 @@ from PySide6.QtWidgets import (
     QSpacerItem, QInputDialog,
 )
 from PySide6.QtGui import QPainter, QPen, QColor, QTransform, QMouseEvent, QFontDatabase, QFont
-from PySide6.QtCore import Qt, QPoint, Signal
+from PySide6.QtCore import Qt, QPoint, Signal, QRect, QPointF
 from ezdxf.sections.table import (
     LayerTable, Layer
 )
 
-from pycad.Drawable import Line, linetypes, lwrindex, dxf_app_id, lwindex, Text, Dimension, Drawable
+from pycad.Drawable import Line, linetypes, lwrindex, dxf_app_id, lwindex, Text, Dimension, Drawable, HotspotClasses, \
+    HotspotHandler
 
 
 def round_to_nearest(value, base):
@@ -98,7 +99,7 @@ def draw_cross(painter: QPainter, point: QPoint):
 def draw_point(painter: QPainter, point: QPoint, color: int = Qt.red):
     x = point.x()
     y = point.y()
-    size = 1
+    size = 2
     pen = QPen(QColor(color), size, Qt.SolidLine)
     painter.setPen(pen)
     painter.drawRect(x - 0.5, y - 0.5, 1.0, 1.0)
@@ -112,6 +113,32 @@ def draw_rect(painter: QPainter, point: QPoint):
     painter.fillRect(point.x() - size, point.y() - size, 2 * size, 2 * size, color)
     painter.drawRect(point.x() - size, point.y() - size, 2 * size, 2 * size)
 
+def draw_hotspot_class(painter: QPainter,hs_class:HotspotClasses, point: QPoint):
+    pen = QPen(QColor(Qt.red), 2, Qt.SolidLine)
+    painter.setPen(pen)
+    size = 10
+    x = point.x()
+    y=point.y()
+    if hs_class == HotspotClasses.ENDPOINT:
+        painter.drawRect(x - size, y - size, 2 * size, 2 * size)
+    elif hs_class == HotspotClasses.GRID:
+        painter.drawLine(x, y - size, x, y + size)
+        painter.drawLine(x - size, y, x + size, y)
+    elif hs_class == HotspotClasses.MIDPOINT:
+        u=2*math.pi/3
+        w=math.pi/6
+        a=QPoint(math.ceil(x + size*math.cos(w+u)),math.ceil(y + size*math.sin(w+u)))
+        b=QPoint(math.ceil(x + size*math.cos(w+2*u)),math.ceil(y + size*math.sin(w+2*u)))
+        c=QPoint(math.ceil(x + size*math.cos(w+3*u)),math.ceil(y + size*math.sin(w+3*u)))
+        painter.drawLine(a.x(),a.y(),b.x(),b.y())
+        painter.drawLine(b.x(),b.y(),c.x(),c.y())
+        painter.drawLine(c.x(),c.y(),a.x(),a.y())
+    elif hs_class == HotspotClasses.PERPENDICULAR:
+        painter.drawEllipse(point, size // 2, size // 2)
+    elif hs_class == HotspotClasses.TOUCHING:
+        painter.drawEllipse(point, size, size)
+    else:
+        painter.drawEllipse(point, size, size)
 
 def draw_cursor(painter: QPainter, point: QPoint, size: int):
     x = point.x()
@@ -258,28 +285,18 @@ class DrawingManager(QWidget):
     def current_layer(self, ):
         return self.layers[self.current_layer_index]
 
-    def apply_mouse_input_modifiers(self, pos: QPoint) -> QPoint:
+    def apply_snaps(self, pos: QPoint) -> QPoint:
         p = QPoint(pos.x(), pos.y())
-        if self.flSnapPoints:
-            nearest_point = find_nearest_point(self.get_all_points(), pos)
-            if nearest_point is not None and distance(nearest_point, pos) <= (self.snapDistance / self.zoom_factor):
-                p = QPoint(nearest_point.x(), nearest_point.y())
-        if self.flSnapGrid:
-            a0 = QPoint(floor_to_nearest(pos.x(), self.gridSpacing.x()),
-                        floor_to_nearest(pos.y(), self.gridSpacing.y()))
-            a1 = QPoint(ceil_to_nearest(pos.x(), self.gridSpacing.x()), floor_to_nearest(pos.y(), self.gridSpacing.y()))
-            a2 = QPoint(floor_to_nearest(pos.x(), self.gridSpacing.x()), ceil_to_nearest(pos.y(), self.gridSpacing.y()))
-            a3 = QPoint(ceil_to_nearest(pos.x(), self.gridSpacing.x()), ceil_to_nearest(pos.y(), self.gridSpacing.y()))
-            nearest_point = find_nearest_point([a0, a1, a2, a3], pos)
-            if nearest_point is not None and distance(nearest_point, pos) <= (self.snapDistance / self.zoom_factor):
-                p = QPoint(nearest_point.x(), nearest_point.y())
+        nearest_point = find_nearest_point([sp[1] for sp in self.get_snap_points( p )], pos)
+        if nearest_point is not None and distance(nearest_point, pos) <= (self.snapDistance / self.zoom_factor):
+            p = QPoint(nearest_point.x(), nearest_point.y())
         self.model_point_snapped = QPoint(p.x(), p.y())
         return p
 
     def update_mouse_positions(self, event: QMouseEvent):
         self.screen_point_raw = event.pos()
         self.model_point_raw = self.map_to_scene(event.pos())
-        self.model_point_snapped = self.apply_mouse_input_modifiers(self.model_point_raw)
+        self.model_point_snapped = self.apply_snaps(self.model_point_raw)
         self.screen_point_snapped = self.map_to_view(self.model_point_snapped)
 
     def create_drawable(self, p1: QPoint, p2: QPoint) -> Drawable:
@@ -339,21 +356,25 @@ class DrawingManager(QWidget):
         painter: QPainter = QPainter(self)
         font = QFont(self.font_family, 12)  # 12 is the font size
         painter.setFont(font)
+        for drawable in self.get_drawables():
+            drawable.update(painter)
 
         # Draw endpoint markers
-        for layer in self.layers:
-            if not layer.visible:
-                continue
-            for drawable in layer.drawables:
-                drawable.update(painter)
-                draw_rect(painter, self.map_to_view(drawable.start_point))
-                if isinstance(drawable.end_point, QPoint):
-                    draw_rect(painter, self.map_to_view(drawable.end_point))
+        for hotspot in self.get_hotspots( self.model_point_raw ):
+            cls,p,updater = hotspot
+            if isinstance(p, QPoint):
+                draw_rect(painter, self.map_to_view(p))
+
+        # Draw endpoint markers
+        for snap_point in self.get_snap_points( self.model_point_raw ):
+            cls,p = snap_point
+            if isinstance(p, QPoint):
+                draw_hotspot_class(painter,cls, self.map_to_view(p))
 
         if self.current_drawable:
             draw_rect(painter, self.map_to_view(self.current_drawable.start_point))
-            if isinstance(drawable.end_point, QPoint):
-                draw_rect(painter, self.map_to_view(drawable.end_point))
+            if isinstance(self.current_drawable.end_point, QPoint):
+                draw_rect(painter, self.map_to_view(self.current_drawable.end_point))
 
         transform = QTransform()
         transform.translate(self.offset.x(), self.offset.y())
@@ -376,19 +397,58 @@ class DrawingManager(QWidget):
             painter.setPen(pen)
             self.current_drawable.draw(painter)
 
-        if self.flSnapGrid:
-            self.draw_local_grid(painter, self.model_point_snapped, 0x8888887f)
+        # if self.flSnapGrid:
+        #     self.draw_local_grid(painter, self.model_point_snapped, 0x111111)
         # Reset transformation to draw crosses in screen coordinates
         painter.setTransform(QTransform())
         draw_cursor(painter, self.screen_point_snapped, self.snapDistance)
 
-    def get_all_points(self):
-        points = []
+    def get_drawables(self, rect:QRect=None) -> List[Drawable]:
+        drawables:List[Drawable] = []
         for layer in self.layers:
-            for line in layer.drawables:
-                points.append(line.start_point)
-                points.append(line.end_point)
-        return points
+            if not layer.visible:
+                continue
+            for drawable in layer.drawables:
+                if rect is None or rect is not None and drawable.intersects(rect):
+                    drawables.append( drawable )
+        return drawables
+
+    def get_hotspots(self, pos:QPoint):
+        rect:QRect =QRect(pos.x()-50,pos.y()-50,100,100)
+        hotspots:List[Tuple[HotspotClasses,QPoint,HotspotHandler]] = []
+        for drawable in self.get_drawables(rect):
+            for hs in drawable.get_hotspots():
+                hotspots.append( hs )
+        return hotspots
+
+    def get_snap_points(self, pos:QPoint) -> List[Tuple[HotspotClasses,QPoint]]:
+        snap_points:List[Tuple[HotspotClasses,QPoint]] = []
+        rect:QRect =QRect(pos.x()-50,pos.y()-50,100,100)
+        p = pos
+        X = p.x()
+        Y = p.y()
+        if pos is not None and self.flSnapGrid:
+            snap_points.append((
+                HotspotClasses.GRID,
+                QPoint(floor_to_nearest(X, self.gridSpacing.x()),floor_to_nearest(Y, self.gridSpacing.y()))
+            ))
+            snap_points.append((
+                HotspotClasses.GRID,
+                QPoint(ceil_to_nearest(X, self.gridSpacing.x()), floor_to_nearest(Y, self.gridSpacing.y()))
+            ))
+            snap_points.append((
+                HotspotClasses.GRID,
+                QPoint(floor_to_nearest(X, self.gridSpacing.x()), ceil_to_nearest(Y, self.gridSpacing.y()))
+            ))
+            snap_points.append((
+                HotspotClasses.GRID,
+                QPoint(ceil_to_nearest(X, self.gridSpacing.x()), ceil_to_nearest(Y, self.gridSpacing.y()))
+            ))
+        if self.flSnapPoints:
+            for drawable in self.get_drawables(rect):
+                for sp in drawable.get_snap_points():
+                    snap_points.append( sp )
+        return snap_points
 
     def get_all_lines(self):
         lines = []
@@ -400,12 +460,12 @@ class DrawingManager(QWidget):
     def draw_local_grid(self, painter: QPainter, center: QPoint, color: int):
         dx = self.gridSpacing.x()
         dy = self.gridSpacing.y()
-        NX = dx * 40
-        NY = dy * 40
-        cx = round(center.x() / NX) * NX
-        cy = round(center.y() / NY) * NY
-        for ix in range(26):
-            for iy in range(26):
+        NX = dx * 10
+        NY = dy * 10
+        cx = round(center.x() / NX ) * NX
+        cy = round(center.y() / NY ) * NY
+        for ix in range(3):
+            for iy in range(3):
                 draw_point(painter, QPoint(cx + ix * dx, cy + iy * dy), color)
                 draw_point(painter, QPoint(cx + ix * dx, cy - iy * dy), color)
                 draw_point(painter, QPoint(cx - ix * dx, cy + iy * dy), color)
@@ -577,8 +637,24 @@ class LayerManager(QDialog):
 
 
 class MainWindow(QMainWindow):
+
+    # Define a light theme stylesheet
+    light_theme = """
+        * {
+            background-color: #ffffff;
+            color: #000000;
+        }
+    """
+    dark_theme = """
+        * {
+            background-color: #111111;
+            color: #eeeeee;
+        }
+    """
+
     def __init__(self, file: str, temp: str):
         super().__init__()
+        self.setStyleSheet(self.light_theme)
         self.font_family = "Arial"
         self.dxf_file = file
         self.temp_file = temp
@@ -588,6 +664,7 @@ class MainWindow(QMainWindow):
         self.layout_man_button: QPushButton = None
         self.setGeometry(100, 100, 800, 600)  # Initial window size
         self.drawing_manager = DrawingManager()
+        self.drawing_manager.setStyleSheet(self.dark_theme)
         self.drawing_manager.changed.connect(self.on_model_changed)
         self.layer_manager = LayerManager(self.drawing_manager)
         self.layer_manager.setMaximumWidth(720)
@@ -596,6 +673,7 @@ class MainWindow(QMainWindow):
         self.layer_manager.setMinimumHeight(480)
         self.layer_manager.changed.connect(self.on_layers_changed)
         self.layer_manager.closed.connect(self.on_layer_manager_closed)
+        self.layer_manager.setStyleSheet(self.light_theme)
         self.layer_manager.show()  # Show the layer manager as a non-blocking modal
 
         self.line_mode_button: QPushButton = None
