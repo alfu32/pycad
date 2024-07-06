@@ -62,7 +62,7 @@ class MainWindow(QMainWindow):
 
         self.init_ui()
         self.load_dxf(file)
-        self.setWindowTitle(f"PyCAD 14 - {self.dxf_file}")
+        self.setWindowTitle(f"PyCAD 24 - {self.dxf_file}")
 
     def on_grid_snap_changed(self, checked):
         self.drawing_manager.flSnapGrid = bool(checked)
