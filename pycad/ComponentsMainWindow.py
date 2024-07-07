@@ -1,3 +1,4 @@
+import csv
 import os
 
 import ezdxf
@@ -302,3 +303,24 @@ class MainWindow(QMainWindow):
 
         doc.saveas(filename)
 
+    def save_csv(self,entities, filename):
+        with open(filename, mode='w', newline='') as file:
+            writer = csv.writer(file)
+            for entity in entities:
+                writer.writerow([entity.save_to_csv()])
+
+    def load_csv(self,filename):
+        entities = []
+        with open(filename, mode='r') as file:
+            reader = csv.reader(file)
+            for row in reader:
+                entity_type, csv_line = row[0].split(',', 1)
+                if entity_type == 'Text':
+                    entity = Text((0, 0), (0, 0))  # dummy points
+                elif entity_type == 'Line':
+                    entity = Line((0, 0), (0, 0))  # dummy points
+                elif entity_type == 'Dimension':
+                    entity = Dimension((0, 0), (0, 0))  # dummy points
+                entity.load_from_csv(row[0])
+                entities.append(entity)
+        return entities

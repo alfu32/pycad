@@ -224,3 +224,16 @@ This application is a PyQt-based drawing tool that allows users to draw lines on
 
 #### Dynamic Line Properties
 - During drawing, the line's color and width are continuously updated to match the current layer's properties, ensuring consistency even when the layer properties change mid-draw.
+
+
+## Drawing Versioning
+
+I want to add the possibility to do source versioning, actually to do drawing versioning. And I want to use the Git logic for doing that. The user can commit explicitly changes using the git dialog window.
+
+The dialog window will present a list of changed entities.
+
+The application will also commit automatically on exit.
+
+Mind that the drawing should create its own .git directory ( maybe named like f"{}.git" ) to keep it interfereing with other drawings .git folder
+
+![versioning specification](./pycad24_git_versioning_panel.png)
