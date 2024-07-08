@@ -8,7 +8,9 @@ from PySide6.QtWidgets import QMainWindow, QSpinBox, QPushButton, QVBoxLayout, Q
     QLabel, QSpacerItem, QWidget
 from ezdxf.sections.table import LayerTable
 
+from pycad.ComponentGitVersioningPanel import GitVersioningPanel
 from pycad.ComponentLayers import LayerManager, LayerModel
+from pycad.ComponentPluginManager import PluginManagerDialog
 from pycad.ComponentsDrawingManager import DrawingManager
 from pycad.DrawableDimensionImpl import Dimension
 from pycad.DrawableLineImpl import Line
@@ -18,7 +20,6 @@ from pycad.util_drawable import qcolor_to_dxf_color, get_true_color
 
 
 class MainWindow(QMainWindow):
-
     # Define a light theme stylesheet
     light_theme = """
         * {
@@ -43,11 +44,14 @@ class MainWindow(QMainWindow):
         self.grid_snap_y: QSpinBox = None
         self.snap_distance: QSpinBox = None
         self.layout_man_button: QPushButton = None
+        self.plugin_manager_button: QPushButton = None
+        self.vcs_button: QPushButton = None
         self.setGeometry(100, 100, 800, 600)  # Initial window size
-        self.drawing_manager = DrawingManager()
+        self.drawing_manager = DrawingManager(file)
         self.drawing_manager.setStyleSheet(self.dark_theme)
         self.drawing_manager.changed.connect(self.on_model_changed)
-        self.layer_manager = LayerManager(self.drawing_manager)
+
+        self.layer_manager = LayerManager(self.drawing_manager, filename=file)
         self.layer_manager.setMaximumWidth(720)
         self.layer_manager.setMinimumWidth(640)
         self.layer_manager.setMaximumHeight(720)
@@ -56,6 +60,14 @@ class MainWindow(QMainWindow):
         self.layer_manager.closed.connect(self.on_layer_manager_closed)
         self.layer_manager.setStyleSheet(self.light_theme)
         self.layer_manager.show()  # Show the layer manager as a non-blocking modal
+
+        self.versioning_panel = GitVersioningPanel(".git", filename=file)
+        self.versioning_panel.closed.connect(self.on_versioning_panel_closed)
+        self.versioning_panel.show()
+
+        self.plugin_manager_panel = PluginManagerDialog(self, filename=file)
+        self.plugin_manager_panel.closed.connect(self.on_plugin_manager_panel_closed)
+        self.plugin_manager_panel.show()
 
         self.line_mode_button: QPushButton = None
         self.dimension_mode_button: QPushButton = None
@@ -96,7 +108,13 @@ class MainWindow(QMainWindow):
         self.save_dxf(self.temp_file)
 
     def on_layer_manager_closed(self, value):
-        self.layout_man_button.setEnabled(value)
+        self.layout_man_button.setChecked(False)
+
+    def on_versioning_panel_closed(self, value):
+        self.vcs_button.setChecked(False)
+
+    def on_plugin_manager_panel_closed(self, value):
+        self.plugin_manager_button.setChecked(False)
 
     def init_ui(self):
 
@@ -151,8 +169,21 @@ class MainWindow(QMainWindow):
 
         self.layout_man_button = QPushButton("Layers")
         self.layout_man_button.clicked.connect(self.show_layers)
-        self.layout_man_button.setEnabled(False)
+        self.layout_man_button.setCheckable(True)
+        self.layout_man_button.setChecked(True)
         control_layout.addWidget(self.layout_man_button)
+
+        self.vcs_button = QPushButton("Versioning")
+        self.vcs_button.clicked.connect(self.show_versioning)
+        self.vcs_button.setCheckable(True)
+        self.vcs_button.setChecked(True)
+        control_layout.addWidget(self.vcs_button)
+
+        self.plugin_manager_button = QPushButton("Plugins")
+        self.plugin_manager_button.clicked.connect(self.show_plugins_manager)
+        self.plugin_manager_button.setCheckable(True)
+        self.plugin_manager_button.setChecked(True)
+        control_layout.addWidget(self.plugin_manager_button)
 
         self.line_mode_button = QPushButton("Line")
         self.line_mode_button.setCheckable(True)
@@ -205,13 +236,21 @@ class MainWindow(QMainWindow):
         self.text_mode_button.setChecked(True)
 
     def show_layers(self):
-
-        self.layout_man_button.setEnabled(False)
+        self.layout_man_button.setChecked(True)
         self.layer_manager.show()
+
+    def show_versioning(self):
+        self.vcs_button.setChecked(True)
+        self.versioning_panel.show()
+
+    def show_plugins_manager(self):
+        self.plugin_manager_button.setChecked(True)
+        self.plugin_manager_panel.show()
 
     def closeEvent(self, event):
         self.save_dxf(self.dxf_file)
         self.layer_manager.close()
+        self.versioning_panel.close()
         event.accept()
         os.unlink(self.temp_file)
 
@@ -303,13 +342,13 @@ class MainWindow(QMainWindow):
 
         doc.saveas(filename)
 
-    def save_csv(self,entities, filename):
+    def save_csv(self, entities, filename):
         with open(filename, mode='w', newline='') as file:
             writer = csv.writer(file)
             for entity in entities:
                 writer.writerow([entity.save_to_csv()])
 
-    def load_csv(self,filename):
+    def load_csv(self, filename):
         entities = []
         with open(filename, mode='r') as file:
             reader = csv.reader(file)

@@ -5,9 +5,20 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="25043644-4411-4e1b-9269-2b584d342d14" name="Changes" comment="feat(objects): &#10;&#10;abstract drawable&#10;&#10;drawable impl:&#10;line, text, dimension">
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/pycad/ComponentPluginManager.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/pycad/PluginInterface.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/example.dxf" beforeDir="false" afterPath="$PROJECT_DIR$/example.dxf" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pycad/ComponentGitVersioningPanel.py" beforeDir="false" afterPath="$PROJECT_DIR$/pycad/ComponentGitVersioningPanel.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pycad/ComponentLayers.py" beforeDir="false" afterPath="$PROJECT_DIR$/pycad/ComponentLayers.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pycad/ComponentsDrawingManager.py" beforeDir="false" afterPath="$PROJECT_DIR$/pycad/ComponentsDrawingManager.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pycad/ComponentsMainWindow.py" beforeDir="false" afterPath="$PROJECT_DIR$/pycad/ComponentsMainWindow.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pycad/Drawable.py" beforeDir="false" afterPath="$PROJECT_DIR$/pycad/Drawable.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pycad/DrawableDimensionImpl.py" beforeDir="false" afterPath="$PROJECT_DIR$/pycad/DrawableDimensionImpl.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pycad/DrawableLineImpl.py" beforeDir="false" afterPath="$PROJECT_DIR$/pycad/DrawableLineImpl.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pycad/DrawableTextImpl.py" beforeDir="false" afterPath="$PROJECT_DIR$/pycad/DrawableTextImpl.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pycad/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/pycad/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -44,23 +55,23 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.go.formatter.settings.were.checked": "true",
-    "RunOnceActivity.go.migrated.go.modules.settings": "true",
-    "git-widget-placeholder": "work",
-    "go.import.settings.migrated": "true",
-    "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "/home/alfu64/Development/test-qtpy",
-    "nodejs_package_manager_path": "npm",
-    "project.structure.last.edited": "Project",
-    "project.structure.proportion": "0.0",
-    "project.structure.side.proportion": "0.4597701",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.go.formatter.settings.were.checked&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.go.migrated.go.modules.settings&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;work&quot;,
+    &quot;go.import.settings.migrated&quot;: &quot;true&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/home/alfu64/Development/test-qtpy&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Project&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.0&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.4597701&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
       <recent name="C:\Users\alferio\Development\test-qtpy" />

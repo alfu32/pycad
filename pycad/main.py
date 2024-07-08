@@ -17,6 +17,4 @@ if __name__ == '__main__':
     repo_path = f"{file_path}.git"
     window = MainWindow(file_path, temp_file)
     window.show()
-    versioningPanel = GitVersioningPanel(".git")
-    versioningPanel.show()
     sys.exit(app.exec())

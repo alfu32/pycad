@@ -13,47 +13,45 @@ from ezdxf.entities import Dimension as DXFDimension
 from pycad.util_geometry import line_intersects_rect, line_contains_point, get_text_dimensions, \
     get_pen_width, set_pen_width, mod
 
+
 class Dimension(Drawable, ABC):
-    
-    def __init__(self, start_point, end_point):
+
+    def __init__(self, start_point: QPoint, end_point: QPoint = None):
+        super(Drawable, self).__init__()
         self.start_point = start_point
         self.end_point = end_point
         self.offset_distance = 25
 
-
-    def isin(self,rect:QRect) -> bool:
+    def isin(self, rect: QRect) -> bool:
         return rect.contains(self.start_point) or rect.contains(self.end_point)
 
     def intersects(self, rect: QRect) -> bool:
         return line_intersects_rect((self.start_point, self.end_point), rect)
-    def set_start_point(self,value:QPoint):
-        self.start_point=value
 
-    def set_send_point(self,value:QPoint):
-        self.end_point=value
+    def set_start_point(self, value: QPoint):
+        self.start_point = value
 
-    def get_hotspots(self) -> List[Tuple[HotspotClasses,QPoint,HotspotHandler]]:
+    def set_send_point(self, value: QPoint):
+        self.end_point = value
+
+    def get_hotspots(self) -> List[Tuple[HotspotClasses, QPoint, HotspotHandler]]:
         return [
-            (HotspotClasses.ENDPOINT,self.start_point,self.set_start_point),
-            (HotspotClasses.ENDPOINT,self.end_point,self.set_send_point),
+            (HotspotClasses.ENDPOINT, self.start_point, self.set_start_point),
+            (HotspotClasses.ENDPOINT, self.end_point, self.set_send_point),
         ]
 
-    def get_snap_points(self) -> List[Tuple[HotspotClasses,QPoint]]:
+    def get_snap_points(self) -> List[Tuple[HotspotClasses, QPoint]]:
         return [
-            (HotspotClasses.ENDPOINT,self.start_point),
-            (HotspotClasses.MIDPOINT, (self.start_point + self.end_point) / 2 ),
-            (HotspotClasses.ENDPOINT,self.end_point),
+            (HotspotClasses.ENDPOINT, self.start_point),
+            (HotspotClasses.MIDPOINT, (self.start_point + self.end_point) / 2),
+            (HotspotClasses.ENDPOINT, self.end_point),
         ]
 
     def update(self, painter: QPainter):
         pass
 
-    def set_last_point(self, point: QPoint):
-        self.end_point = point
-
-
     def contains_point(self, point):
-        return line_contains_point((self.start_point, self.end_point),point)
+        return line_contains_point((self.start_point, self.end_point), point)
 
     def intersect(self, other) -> bool:
         return False

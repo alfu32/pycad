@@ -4,45 +4,60 @@ from enum import Enum
 from typing import List, Tuple, Callable
 
 from PySide6.QtGui import QPainter
-from PySide6.QtCore import QPoint, QRect
+from PySide6.QtCore import QPoint, QRect, Signal
 
 from ezdxf.document import Drawing as DXFDrawing
 
 
 class HotspotClasses(Enum):
-    ENDPOINT="ENDPOINT"
-    MIDPOINT="MIDPOINT"
-    PERPENDICULAR="PERPENDICULAR"
-    TOUCHING="TOUCHING"
-    GRID="GRID"
+    ENDPOINT = "ENDPOINT"
+    MIDPOINT = "MIDPOINT"
+    PERPENDICULAR = "PERPENDICULAR"
+    TOUCHING = "TOUCHING"
+    GRID = "GRID"
 
-HotspotHandler = Callable[[QPoint],None]
 
+HotspotHandler = Callable[[QPoint], None]
 
 
 class Drawable(ABC):
-    def __init__(self, start_point, end_point):
+    changed = Signal(object)  # Define a custom signal with a generic object type
+    finished = Signal(bool)  # Define a custom signal with a generic object type
+    points: List[QPoint] = []
+    moving_point: QPoint = None
+    max_points: int = 2
+
+    def __init__(self, start_point: QPoint, end_point: QPoint = None):
         self.start_point = start_point
         self.end_point = end_point
 
     @abstractmethod
-    def isin(self,rect:QRect) -> bool:
+    def isin(self, rect: QRect) -> bool:
         pass
 
     @abstractmethod
     def update(self, painter: QPainter):
         pass
 
-    @abstractmethod
-    def set_last_point(self, point: QPoint):
-        pass
+    def build_is_finished(self) -> bool:
+        return len(self.points) == self.max_points
+
+    def set_next_point(self, point: QPoint):
+        self.points.append(point)
+        if self.build_is_finished():
+            self.finished.emit(self)
+        else:
+            self.changed.emit(self)
+
+    def set_moving_point(self, point: QPoint):
+        self.moving_point = point
 
     @abstractmethod
     def intersect(self, other) -> bool:
         return False
 
     @abstractmethod
-    def intersects(self,rect:QRect) -> bool:
+    def intersects(self, rect: QRect) -> bool:
         pass
 
     @abstractmethod
@@ -62,11 +77,11 @@ class Drawable(ABC):
         pass
 
     @abstractmethod
-    def get_hotspots(self) -> List[Tuple[HotspotClasses,QPoint,HotspotHandler]]:
+    def get_hotspots(self) -> List[Tuple[HotspotClasses, QPoint, HotspotHandler]]:
         pass
 
     @abstractmethod
-    def get_snap_points(self) -> List[Tuple[HotspotClasses,QPoint]]:
+    def get_snap_points(self) -> List[Tuple[HotspotClasses, QPoint]]:
         pass
 
     @abstractmethod
@@ -75,4 +90,3 @@ class Drawable(ABC):
 
     def get_rotation(self):
         return math.atan2(self.start_point.y() - self.end_point.y(), self.start_point.x() - self.end_point.x())
-

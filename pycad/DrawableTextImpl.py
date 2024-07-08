@@ -14,11 +14,12 @@ from ezdxf.enums import TextEntityAlignment
 
 
 class Text(Drawable, ABC):
-    
-    def __init__(self, start_point, end_point=None, height=1.0, text="init"):
-        self.text = text
+
+    def __init__(self, start_point: QPoint, end_point: QPoint = None, height=1.0, text="init"):
+        super(Drawable, self).__init__()
         self.start_point = start_point
         self.end_point = end_point
+        self.text = text
         self.height = height
 
     def isin(self,rect:QRect) -> bool:
@@ -53,7 +54,7 @@ class Text(Drawable, ABC):
         # self.end_point = QPoint(start_point.x() + du.x(), start_point.y() + du.y())
         pass
 
-    def set_last_point(self, point: QPoint):
+    def set_next_point(self, point: QPoint):
         self.end_point = point
 
 

@@ -18,7 +18,7 @@ from pycad.util_math import distance, floor_to_nearest, ceil_to_nearest
 class DrawingManager(QWidget):
     changed = Signal(object)  # Define a custom signal with a generic object type
 
-    def __init__(self):
+    def __init__(self, filename: str):
         super().__init__()
         self.setMouseTracking(True)
         self.setCursor(Qt.BlankCursor)
