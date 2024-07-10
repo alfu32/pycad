@@ -1,10 +1,11 @@
 from PySide6.QtWidgets import (QApplication, QDialog, QVBoxLayout, QHBoxLayout,
-                               QListWidget, QCheckBox, QPushButton, QLabel, QMessageBox)
+                               QListWidget, QListWidgetItem, QCheckBox, QPushButton, QLabel, QMessageBox)
 from PySide6.QtCore import Qt, Signal
 import requests
 import os
 import importlib.util
 
+from pycad.Plugin import PluginInterface
 from pycad.Drawable import Drawable
 
 
@@ -13,6 +14,7 @@ class PluginManagerDialog(QDialog):
 
     def closeEvent(self, event):
         self.closed.emit(True)
+
     def __init__(self, parent=None, filename: str = ""):
         super(PluginManagerDialog, self).__init__(parent)
 
@@ -43,9 +45,9 @@ class PluginManagerDialog(QDialog):
 
         self.setLayout(main_layout)
 
-    def load_plugins(self):
+    def load_core_plugins(self):
         self.plugins_list.clear()
-        response = requests.get('https://api.github.com/search/repositories?q=PyCabs24-plugin')
+        response = requests.get('https://api.github.com/search/repositories?q=pycad24-plugin-core-')
         if response.status_code == 200:
             plugins = response.json().get('items', [])
             for plugin in plugins:
@@ -55,12 +57,31 @@ class PluginManagerDialog(QDialog):
         else:
             QMessageBox.warning(self, "Error", "Failed to fetch plugins from GitHub.")
 
+    def load_plugins(self):
+        self.plugins_list.clear()
+        response = requests.get('https://api.github.com/search/repositories?q=pycad24-plugin-')
+        if response.status_code == 200:
+            plugins = response.json().get('items', [])
+            for plugin in plugins:
+                checkbox = QCheckBox(f"{plugin['name']} - {plugin['description']}")
+                checkbox.setObjectName(plugin['full_name'])
+                list_item = QListWidgetItem(self.plugins_list)
+                self.plugins_list.setItemWidget(list_item, checkbox)
+        else:
+            QMessageBox.warning(self, "Error", "Failed to fetch plugins from GitHub.")
+
     def load_selected_plugins(self):
         for index in range(self.plugins_list.count()):
-            item = self.plugins_list.item(index)
-            if item.isSelected():
-                plugin_full_name = item.objectName()
-                self.download_and_load_plugin(plugin_full_name)
+            list_item = self.plugins_list.item(index)
+            checkbox = self.plugins_list.itemWidget(list_item)
+            if isinstance(checkbox, QCheckBox):
+                print("yay")
+                if checkbox.isChecked():
+                    plugin_full_name = checkbox.objectName()
+                    self.download_and_load_plugin(plugin_full_name)
+            else:
+                print("nay")
+
 
     def download_and_load_plugin(self, full_name):
         plugin_url = f"https://raw.githubusercontent.com/{full_name}/main/plugin.py"
@@ -78,14 +99,18 @@ class PluginManagerDialog(QDialog):
         spec = importlib.util.spec_from_file_location("plugin", path)
         plugin_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(plugin_module)
-        if hasattr(plugin_module, 'Plugin'):
-            plugin_instance = plugin_module.Plugin()
-            if isinstance(plugin_instance, Drawable):
-                plugin_instance.initialize_controls()
-            else:
-                QMessageBox.warning(self, "Error", "The plugin does not conform to the Drawable interface.")
-        else:
-            QMessageBox.warning(self, "Error", "The plugin does not contain a Plugin class.")
+        for name, obj in plugin_module.__dict__.items():
+            if (
+                    isinstance(obj, type)
+                    and issubclass(obj, PluginInterface)
+                    and obj is not PluginInterface
+            ):
+                plugin_instance = obj.get_instance()
+                if isinstance(plugin_instance, PluginInterface):
+                    plugin_instance.init_ui()
+                else:
+                    QMessageBox.warning(self, "Error", "The plugin does not conform to the PluginInterface.")
+                break
 
 
 if __name__ == "__main__":
