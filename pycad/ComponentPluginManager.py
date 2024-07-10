@@ -81,10 +81,10 @@ class PluginManagerDialog(QDialog):
 
 
                 if plugin_info :
-                    plugin_path = os.path.join(PLUGINS_DIR, plugin_name)
+                    plugin_path = os.path.join(PLUGINS_DIR, f"{plugin_name}.py")
                     verification_id = plugin_info['verification_id']
                     file_sha = self.chk(plugin_path)
-                    print(f"comparing validation with validation id {plugin_name} \nverification_id {verification_id}\n file sha     {file_sha}")
+                    print(f"comparing sha of {plugin_path} with validation id of {plugin_name} \nverification_id {verification_id}\n file sha     {file_sha}")
                     if file_sha == verification_id:
                         validated = "Yes"
 
