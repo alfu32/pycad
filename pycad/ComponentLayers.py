@@ -171,9 +171,10 @@ class LayerManager(QDialog):
     changed = Signal(object)  # Define a custom signal with a generic object type
     closed = Signal(bool)  # Define a custom signal with a generic object type
 
-    def __init__(self, canvas, parent=None):
+    def __init__(self, canvas, parent: QWidget = None, filename: str = ""):
         super().__init__(parent)
-        self.setWindowTitle("Layer Manager")
+
+        self.setWindowTitle(f"PyCAD24 - Layer Manager - {filename}")
         self.canvas = canvas
 
         layout = QVBoxLayout()
