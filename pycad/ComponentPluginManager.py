@@ -1,16 +1,16 @@
 from PySide6.QtWidgets import (QApplication, QDialog, QVBoxLayout, QHBoxLayout,
-                               QTableWidget, QTableWidgetItem, QHeaderView, QCheckBox, QPushButton, QLabel, QMessageBox)
-from PySide6.QtCore import Signal, Qt
+                               QListWidget, QListWidgetItem, QCheckBox, QPushButton, QLabel, QMessageBox, QTableWidget, QTableWidgetItem, QHeaderView)
+from PySide6.QtCore import Qt, Signal
 import requests
 import os
 import importlib.util
 import hashlib
 import json
 
+from pycad.Plugin import PluginInterface
+
 PLUGINS_DIR = 'plugins'
-VALIDATED_PLUGINS_URL = 'https://raw.githubusercontent.com/alfu32/pycad/main/validatedplugins.json'
-
-
+VALIDATION_URL = 'https://raw.githubusercontent.com/alfu32/pycad/main/validatedplugins.json'
 
 class PluginManagerDialog(QDialog):
     closed = Signal(bool)  # Define a custom signal with a generic object type
@@ -18,7 +18,7 @@ class PluginManagerDialog(QDialog):
     def closeEvent(self, event):
         self.closed.emit(True)
 
-    def __init__(self, parent=None, filename: str = ""):
+    def __init__(self, parent=None,filename:str=""):
         super(PluginManagerDialog, self).__init__(parent)
 
         self.setWindowTitle(f"PyCAD24 - Plugin Manager {filename}")
@@ -28,20 +28,16 @@ class PluginManagerDialog(QDialog):
         if not os.path.exists(PLUGINS_DIR):
             os.makedirs(PLUGINS_DIR)
 
-        # Load validated plugins JSON
-        self.validated_plugins = self.load_validated_plugins()
-
         # Layouts
         main_layout = QVBoxLayout()
         plugins_layout = QVBoxLayout()
         button_layout = QHBoxLayout()
 
-        # Plugins Table
+        # Plugins List
         self.plugins_table = QTableWidget()
         self.plugins_table.setColumnCount(3)
         self.plugins_table.setHorizontalHeaderLabels(["Plugin", "Description", "Validated"])
-        self.plugins_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
-        self.plugins_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        self.plugins_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.load_plugins()
 
         # Load Button
@@ -59,63 +55,81 @@ class PluginManagerDialog(QDialog):
 
         self.setLayout(main_layout)
 
-    def load_validated_plugins(self):
-        response = requests.get(VALIDATED_PLUGINS_URL)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            QMessageBox.warning(self, "Error", "Failed to fetch validated plugins list.")
-            return {}
-
     def load_plugins(self):
         self.plugins_table.setRowCount(0)
-        response = requests.get('https://api.github.com/search/repositories?q=PyCabs24-plugin')
+        response = requests.get('https://api.github.com/search/repositories?q=pycad24-plugin')
         local_plugins = self.get_local_plugins()
+        validated_plugins = self.get_validated_plugins()
+
         if response.status_code == 200:
             plugins = response.json().get('items', [])
             for plugin in plugins:
-                row_position = self.plugins_table.rowCount()
-                self.plugins_table.insertRow(row_position)
-                plugin_name = f"{plugin['full_name'].replace('/', '.')}.py"
-                is_local = plugin_name in local_plugins
-                is_validated = self.is_plugin_validated(plugin_name)
+                plugin_name = f"github.{plugin['full_name'].replace('/', '.')}"
 
+                print(f"loading plugin {plugin_name}")
+                is_local = plugin_name in local_plugins
                 checkbox = QCheckBox(f"{plugin['name']}")
                 checkbox.setObjectName(plugin['full_name'])
                 checkbox.setChecked(is_local)
+
+                validated = "No"
+                plugin_info = next((item for item in validated_plugins if item['name'] == plugin_name), None)
+
+                print(f"plugin_info {plugin_info}")
+
+                #plugin_info = [info for info in validated_plugins if ]
+
+
+                if plugin_info :
+                    plugin_path = os.path.join(PLUGINS_DIR, plugin_name)
+                    verification_id = plugin_info['verification_id']
+                    file_sha = self.chk(plugin_path)
+                    print(f"comparing validation with validation id {plugin_name} \nverification_id {verification_id}\n file sha     {file_sha}")
+                    if file_sha == verification_id:
+                        validated = "Yes"
+
+                row_position = self.plugins_table.rowCount()
+                self.plugins_table.insertRow(row_position)
                 self.plugins_table.setCellWidget(row_position, 0, checkbox)
-
                 self.plugins_table.setItem(row_position, 1, QTableWidgetItem(plugin['description']))
-
-                validated_item = QTableWidgetItem("✔" if is_validated else "❗")
-                self.plugins_table.setItem(row_position, 2, validated_item)
+                self.plugins_table.setItem(row_position, 2, QTableWidgetItem(validated))
         else:
             QMessageBox.warning(self, "Error", "Failed to fetch plugins from GitHub.")
 
     def get_local_plugins(self):
         return {file for file in os.listdir(PLUGINS_DIR) if file.endswith('.py')}
 
-    def is_plugin_validated(self, plugin_name):
-        plugin_path = os.path.join(PLUGINS_DIR, plugin_name)
+    def get_validated_plugins(self):
+        response = requests.get(VALIDATION_URL)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            QMessageBox.warning(self, "Error", "Failed to fetch validated plugins.")
+            return []
+    def chk(self,plugin_path:str) -> str:
         if os.path.exists(plugin_path):
             with open(plugin_path, 'rb') as file:
-                file_content = file.read()
-                sha_signature = hashlib.sha256(file_content).hexdigest()
-                return self.validated_plugins.get(plugin_name) == sha_signature
-        return False
+                file_data = file.read()
+                sha1_hash = hashlib.sha1(file_data).hexdigest()
+                return sha1_hash
+        return "000"
+
+    def validate_plugin(self, plugin_name, verification_id):
+        plugin_path = os.path.join(PLUGINS_DIR, plugin_name)
+        return self.chk(plugin_path) == verification_id
 
     def load_selected_plugins(self):
-        for row in range(self.plugins_table.rowCount()):
-            checkbox = self.plugins_table.cellWidget(row, 0)
-            if checkbox.isChecked():
+        for index in range(self.plugins_table.rowCount()):
+            checkbox = self.plugins_table.cellWidget(index, 0)
+            if isinstance(checkbox,QCheckBox) and checkbox.isChecked():
                 plugin_full_name = checkbox.objectName()
                 self.download_and_load_plugin(plugin_full_name)
 
     def download_and_load_plugin(self, full_name):
         plugin_url = f"https://raw.githubusercontent.com/{full_name}/main/plugin.py"
         readme_url = f"https://raw.githubusercontent.com/{full_name}/main/README.md"
-        plugin_name = f"{full_name.replace('/', '.')}.py"
-        readme_name = f"{full_name.replace('/', '.')}.md"
+        plugin_name = f"github.{full_name.replace('/', '.')}.py"
+        readme_name = f"github.{full_name.replace('/', '.')}.md"
 
         # Download plugin.py
         response = requests.get(plugin_url)
@@ -141,11 +155,12 @@ class PluginManagerDialog(QDialog):
         spec = importlib.util.spec_from_file_location(plugin_name.replace('.', '_'), plugin_path)
         plugin_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(plugin_module)
-        for name, obj in plugin_module.__dict__.items():
-            if isinstance(obj, type) and issubclass(obj, PluginInterface) and obj is not PluginInterface:
-                plugin_instance = obj.get_instance()
+        for name, cls in plugin_module.__dict__.items():
+            if isinstance(cls, type) and issubclass(cls, PluginInterface) and cls is not PluginInterface:
+                plugin_instance = cls.get_instance()
                 if isinstance(plugin_instance, PluginInterface):
-                    plugin_instance.init_ui()
+                    # plugin_instance.init_ui()
+                    print(f"plugin {name} loaded :::: {plugin_instance}")
                 else:
                     QMessageBox.warning(self, "Error", "The plugin does not conform to the PluginInterface.")
                 break
