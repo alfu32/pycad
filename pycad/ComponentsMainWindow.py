@@ -298,7 +298,9 @@ class MainWindow(QMainWindow):
                 end_point = QPoint(entity.dxf.end.x, entity.dxf.end.y)
                 color = QColor(entity.dxf.color) if entity.dxf.hasattr('color') else QColor(Qt.black)
                 width = entity.dxf.lineweight if entity.dxf.hasattr('lineweight') else 1
-                drawable = Line(start_point, end_point)
+                drawable = Line()
+                drawable.push(start_point)
+                drawable.push(end_point)
             elif entity.dxftype() == 'TEXT':
                 drawable = Text.from_dxf(entity)
             elif entity.dxftype() == 'DIMENSION':

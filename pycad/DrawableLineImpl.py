@@ -1,6 +1,6 @@
 import math
 from abc import ABC, abstractmethod
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, override
 
 import ezdxf
 from PySide6.QtCore import QPoint, QRect
@@ -13,31 +13,36 @@ from ezdxf.document import Modelspace as DXFModelspace
 
 
 def split_line_by_points(line: HasSegment, points):
+    # return [line]
     segments = []
     start = line.segment.a
     for point in points:
-        segments.append(Line(start, point))
+        l = Line()
+        l.push(start)
+        l.push(point)
+        segments.append(line)
         start = point
-    segments.append(Line(start, line.segment.b))
+    l = Line()
+    l.push(start)
+    l.push(line.segment.b)
+    segments.append(line)
     return segments
 
 
 
 class Line(Drawable, ABC):
 
-    def __init__(self, start_point: QPoint, end_point: QPoint = None):
+    def __init__(self):
         super(Drawable, self).__init__()
-        self.segment: Segment = Segment(start_point, end_point)
-        self.segment.set(start_point, end_point)
+        self.segment: Segment = Segment(QPoint(0, 0), QPoint(0, 0))
+        self._points = 0
         self.points: List[QPoint] = []
         self.moving_point: QPoint = None
+        self.max_points: int = 2
 
+    @override
     def is_done(self):
-        return self.segment.a != self.segment.b
-
-    def push(self, point: QPoint):
-        self.points.append(point)
-        self.segment.set(self.points[0], self.points[1])
+        return self._points >= 2
 
     def isin(self, rect: QRect) -> bool:
         return self.segment.is_in(rect)
@@ -52,16 +57,20 @@ class Line(Drawable, ABC):
         self.segment.set(self.segment.a, value)
 
     def get_hotspots(self) -> List[Tuple[HotspotClasses, QPoint, HotspotHandler]]:
+        a = self.segment.a
+        b = self.segment.b if self._points>=2 else self.moving_point
         return [
-            (HotspotClasses.ENDPOINT, self.segment.a, self.set_start_point),
-            (HotspotClasses.ENDPOINT, self.segment.b, self.set_send_point),
+            (HotspotClasses.ENDPOINT, a, self.set_start_point),
+            (HotspotClasses.ENDPOINT, b, self.set_send_point),
         ]
 
     def get_snap_points(self) -> List[Tuple[HotspotClasses, QPoint]]:
+        a = self.segment.a
+        b = self.segment.b if self._points>=2 else self.moving_point
         return [
-            (HotspotClasses.ENDPOINT, self.segment.a),
-            (HotspotClasses.MIDPOINT, (self.segment.a + self.segment.b) / 2),
-            (HotspotClasses.ENDPOINT, self.segment.b),
+            (HotspotClasses.ENDPOINT, a),
+            (HotspotClasses.MIDPOINT, (a + b) / 2),
+            (HotspotClasses.ENDPOINT, b),
         ]
 
     def update(self, painter: QPainter):
@@ -95,7 +104,9 @@ class Line(Drawable, ABC):
         return hash((min(start_tuple, end_tuple), max(start_tuple, end_tuple)))
 
     def draw(self, painter: QPainter):
-        painter.drawLine(self.segment.a.x(), self.segment.a.y(), self.segment.b.x(), self.segment.b.y())
+        a = self.segment.a
+        b = self.segment.b if self._points>=2 else self.moving_point
+        painter.drawLine(a.x(), a.y(), b.x(), b.y())
 
     def save_to_dxf(self, doc: DXFDrawing, layer_name: str):
         msp: DXFModelspace = doc.modelspace()

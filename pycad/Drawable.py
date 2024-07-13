@@ -25,15 +25,26 @@ HotspotHandler = Callable[[QPoint], None]
 class Drawable(ABC):
     changed = Signal(object)  # Define a custom signal with a generic object type
     finished = Signal(bool)  # Define a custom signal with a generic object type
-    points: List[QPoint] = []
-    moving_point: QPoint = None
-    max_points: int = 2
 
-    def __init__(self, start_point: QPoint, end_point: QPoint = None):
+    def __init__(self):
         self.segment: Segment = Segment(QPoint(0, 0), QPoint(0, 0))
-        self.segment.set(start_point,end_point)
-        self.points.append(start_point)
-        self.points.append(end_point)
+        self._points = 0
+        self.points: List[QPoint] = []
+        self.moving_point: QPoint = None
+        self.max_points: int = 2
+
+    @abstractmethod
+    def is_done(self):
+        pass
+
+    def push(self, point: QPoint):
+        if self._points == 0:
+            self.segment.a = point
+            self._points += 1
+        elif self._points == 1:
+            self.segment.b = point
+            self._points += 1
+        self.points.append(point)
 
     @abstractmethod
     def isin(self, rect: QRect) -> bool:
@@ -92,7 +103,9 @@ class Drawable(ABC):
         pass
 
     def get_rotation(self):
-        return math.atan2(self.segment.a.y() - self.segment.b.y(), self.segment.a.x() - self.segment.b.x())
+        a = self.segment.a
+        b = self.segment.b if self._points>=2 else self.moving_point
+        return math.atan2(a.y() - b.y(), a.x() - b.x())
 
     def is_done(self) -> bool:
         pass

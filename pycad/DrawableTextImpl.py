@@ -1,6 +1,6 @@
 import math
 from abc import ABC
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, override
 
 from PySide6.QtCore import QPoint, QRect
 from PySide6.QtGui import QPainter
@@ -15,15 +15,19 @@ from ezdxf.enums import TextEntityAlignment
 
 class Text(Drawable, ABC):
 
-    def __init__(self, start_point: QPoint, end_point: QPoint = None, height=1.0, text="init"):
+    def __init__(self, height=1.0, text="init"):
         super(Drawable, self).__init__()
         self.text = text
         self.height = height
-        self.segment: Segment = Segment(start_point,end_point)
-        self.segment.set(start_point,end_point)
+        self.segment: Segment = Segment(QPoint(0, 0), QPoint(0, 0))
+        self._points = 0
+        self.points: List[QPoint] = []
+        self.moving_point: QPoint = None
+        self.max_points: int = 2
 
+    @override
     def is_done(self):
-        return self.segment.a != self.segment.b
+        return self._points >= 2
 
     def isin(self, rect: QRect) -> bool:
         return self.segment.is_in(rect)
@@ -114,6 +118,8 @@ class Text(Drawable, ABC):
         a = rotation * math.pi / 180
         dp = QPoint(width * math.cos(a), width * math.sin(a))
         p2 = QPoint(p1.x() + dp.x(), p1.y() + dp.y(), )
-        text_instance = cls(p1, p2, entity_data.dxf.height)
+        text_instance = cls(entity_data.dxf.height)
+        text_instance.push(p1)
+        text_instance.push(p2)
         text_instance.text = entity_data.dxf.text
         return text_instance

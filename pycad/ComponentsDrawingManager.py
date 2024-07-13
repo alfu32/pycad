@@ -100,14 +100,14 @@ class DrawingManager(QWidget):
         self.model_point_snapped = self.apply_snaps(self.model_point_raw)
         self.screen_point_snapped = self.map_to_view(self.model_point_snapped)
 
-    def create_drawable(self, p1: QPoint, p2: QPoint) -> Drawable:
+    def create_drawable(self) -> Drawable:
         if self.mode == 'line':
-            return Line(p1, p2)
+            return Line()
         elif self.mode == 'text':
-            t = Text(p1, p2, 25, "I__________I")
+            t = Text(25, "I__________I")
             return t
         elif self.mode == 'dimension':
-            return Dimension(p1, p2)
+            return Dimension()
 
     def mousePressEvent(self, event: QMouseEvent):
         self.update_mouse_positions(event)
@@ -119,6 +119,7 @@ class DrawingManager(QWidget):
             if event.modifiers() & Qt.ControlModifier:
                 end_point = snap_to_angle(self.current_drawable.segment.a, end_point)
             self.current_drawable.segment.b = end_point
+            self.current_drawable.set_moving_point(end_point)
             # Update line color and width to match the current layer
             # TODO move to a layerChanged event listener
             layer = self.layers[self.current_layer_index]
@@ -134,13 +135,9 @@ class DrawingManager(QWidget):
         if event.button() == Qt.LeftButton:
             layer = self.current_layer()
             if self.current_drawable is None:
-                self.current_drawable = self.create_drawable(
-                    self.model_point_snapped,
-                    self.model_point_snapped,
-                )
-            else:
-                self.current_drawable.segment.b = end_point
-                # self.current_drawable.push(self.model_point_snapped)
+                self.current_drawable = self.create_drawable()
+                self.current_drawable.set_moving_point(end_point)
+            self.current_drawable.push(end_point)
         elif event.button() == Qt.RightButton:
             layer = self.current_layer()
             for line in layer.drawables:
@@ -148,6 +145,7 @@ class DrawingManager(QWidget):
                     layer.drawables.remove(line)
                     self.update()
         if self.current_drawable is not None and self.current_drawable.is_done():
+            # TODO duplicated block FINALIZE_DRAWABLE_CONSTRUCTION
             self.layers[self.current_layer_index].add_drawable(self.current_drawable)
             self.current_drawable = None
             self.number_input = ""
@@ -190,7 +188,8 @@ class DrawingManager(QWidget):
                 length = math.sqrt(uw.x() ** 2 + uw.y() ** 2)
                 end_point = QPoint(a.x()+int(uw.x() * new_length / length), a.y()+int(uw.y() * new_length / length))
                 self.current_drawable.segment.b = end_point
-
+                self.current_drawable.push(end_point)
+                # TODO duplicated block FINALIZE_DRAWABLE_CONSTRUCTION
                 self.layers[self.current_layer_index].add_drawable(self.current_drawable)
                 self.current_drawable = None
                 self.number_input = ""
