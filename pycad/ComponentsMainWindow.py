@@ -10,7 +10,7 @@ from ezdxf.sections.table import LayerTable
 
 from pycad.ComponentGitVersioningPanel import GitVersioningPanel
 from pycad.ComponentLayers import LayerManager, LayerModel
-from pycad.ComponentPluginManager import PluginManagerDialog
+from pycad.ComponentPluginManager import PluginManager
 from pycad.ComponentsDrawingManager import DrawingManager
 from pycad.DrawableDimensionImpl import Dimension
 from pycad.DrawableLineImpl import Line
@@ -50,6 +50,7 @@ class MainWindow(QMainWindow):
         self.drawing_manager = DrawingManager(file)
         self.drawing_manager.setStyleSheet(self.dark_theme)
         self.drawing_manager.changed.connect(self.on_model_changed)
+        self.drawing_manager.number_input_changed.connect(self.on_number_input_changed)
 
         self.layer_manager = LayerManager(self.drawing_manager, filename=file)
         self.layer_manager.setMaximumWidth(720)
@@ -59,15 +60,15 @@ class MainWindow(QMainWindow):
         self.layer_manager.changed.connect(self.on_layers_changed)
         self.layer_manager.closed.connect(self.on_layer_manager_closed)
         self.layer_manager.setStyleSheet(self.light_theme)
-        self.layer_manager.show()  # Show the layer manager as a non-blocking modal
+        # self.layer_manager.show()  # Show the layer manager as a non-blocking modal
 
         self.versioning_panel = GitVersioningPanel(".git", filename=file)
         self.versioning_panel.closed.connect(self.on_versioning_panel_closed)
-        self.versioning_panel.show()
+        # self.versioning_panel.show()
 
-        self.plugin_manager_panel = PluginManagerDialog(self, filename=file)
+        self.plugin_manager_panel = PluginManager(filename=file, parent=self)
         self.plugin_manager_panel.closed.connect(self.on_plugin_manager_panel_closed)
-        self.plugin_manager_panel.show()
+        # self.plugin_manager_panel.show()
 
         self.line_mode_button: QPushButton = None
         self.dimension_mode_button: QPushButton = None
@@ -106,6 +107,11 @@ class MainWindow(QMainWindow):
         # print("model changed", flush=True)
         # print(f"{model}", flush=True)
         self.save_dxf(self.temp_file)
+
+    def on_number_input_changed(self, text):
+        # print("model changed", flush=True)
+        # print(f"{model}", flush=True)
+        self.statusBar().showMessage(f"Input: {text}")
 
     def on_layer_manager_closed(self, value):
         self.layout_man_button.setChecked(False)
@@ -170,19 +176,19 @@ class MainWindow(QMainWindow):
         self.layout_man_button = QPushButton("Layers")
         self.layout_man_button.clicked.connect(self.show_layers)
         self.layout_man_button.setCheckable(True)
-        self.layout_man_button.setChecked(True)
+        self.layout_man_button.setChecked(False)
         control_layout.addWidget(self.layout_man_button)
 
         self.vcs_button = QPushButton("Versioning")
         self.vcs_button.clicked.connect(self.show_versioning)
         self.vcs_button.setCheckable(True)
-        self.vcs_button.setChecked(True)
+        self.vcs_button.setChecked(False)
         control_layout.addWidget(self.vcs_button)
 
         self.plugin_manager_button = QPushButton("Plugins")
         self.plugin_manager_button.clicked.connect(self.show_plugins_manager)
         self.plugin_manager_button.setCheckable(True)
-        self.plugin_manager_button.setChecked(True)
+        self.plugin_manager_button.setChecked(False)
         control_layout.addWidget(self.plugin_manager_button)
 
         self.line_mode_button = QPushButton("Line")

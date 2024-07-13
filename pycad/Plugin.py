@@ -10,6 +10,7 @@ from pycad.Drawable import Drawable
 
 
 class PluginInterface:
+    github_url: str = ""
     _instance = None
 
     @staticmethod
@@ -18,7 +19,7 @@ class PluginInterface:
             PluginInterface._instance = PluginInterface()
         return PluginInterface._instance
 
-    def init_ui(self) -> QWidget:
+    def init_plugin_ui(self) -> QWidget:
         raise NotImplementedError("init_ui not implemented")
 
     def destroy_ui(self, element: QWidget):
@@ -27,5 +28,5 @@ class PluginInterface:
     def create_drawable(self, layer: LayerModel, start_point: QPoint) -> Drawable:
         raise NotImplementedError("create_drawable not implemented")
 
-    def modify_drawable(self, layer: LayerModel, new_point: QPoint) -> Drawable:
+    def modify_drawable(self, drawable: Drawable, layer: LayerModel, new_point: QPoint) -> Drawable:
         raise NotImplementedError("modify_drawable not implemented")

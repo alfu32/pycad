@@ -4,12 +4,20 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="25043644-4411-4e1b-9269-2b584d342d14" name="Changes" comment="feat(various): &#10;&#10;plugins on github&#10;git version control for drawings">
-      <change afterPath="$PROJECT_DIR$/pycad/Plugin.py" afterDir="false" />
+    <list default="true" id="25043644-4411-4e1b-9269-2b584d342d14" name="Changes" comment="feat(plugins): &#10;&#10;plugins on github&#10;git version control for drawings">
+      <change afterPath="$PROJECT_DIR$/pycad/util_interaction.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/example.dxf" beforeDir="false" afterPath="$PROJECT_DIR$/example.dxf" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pycad/ComponentLayers.py" beforeDir="false" afterPath="$PROJECT_DIR$/pycad/ComponentLayers.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pycad/ComponentPluginManager.py" beforeDir="false" afterPath="$PROJECT_DIR$/pycad/ComponentPluginManager.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pycad/PluginInterface.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pycad/ComponentsDrawingManager.py" beforeDir="false" afterPath="$PROJECT_DIR$/pycad/ComponentsDrawingManager.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pycad/ComponentsMainWindow.py" beforeDir="false" afterPath="$PROJECT_DIR$/pycad/ComponentsMainWindow.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pycad/Drawable.py" beforeDir="false" afterPath="$PROJECT_DIR$/pycad/Drawable.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pycad/DrawableDimensionImpl.py" beforeDir="false" afterPath="$PROJECT_DIR$/pycad/DrawableDimensionImpl.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pycad/DrawableLineImpl.py" beforeDir="false" afterPath="$PROJECT_DIR$/pycad/DrawableLineImpl.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pycad/DrawableTextImpl.py" beforeDir="false" afterPath="$PROJECT_DIR$/pycad/DrawableTextImpl.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pycad/Plugin.py" beforeDir="false" afterPath="$PROJECT_DIR$/pycad/Plugin.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pycad/util_geometry.py" beforeDir="false" afterPath="$PROJECT_DIR$/pycad/util_geometry.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -312,7 +320,15 @@
       <option name="project" value="LOCAL" />
       <updated>1720473075105</updated>
     </task>
-    <option name="localTasksCounter" value="26" />
+    <task id="LOCAL-00026" summary="feat(plugins): &#10;&#10;plugins on github&#10;git version control for drawings">
+      <option name="closed" value="true" />
+      <created>1720629154898</created>
+      <option name="number" value="00026" />
+      <option name="presentableId" value="LOCAL-00026" />
+      <option name="project" value="LOCAL" />
+      <updated>1720629154898</updated>
+    </task>
+    <option name="localTasksCounter" value="27" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -336,7 +352,8 @@
     <MESSAGE value="feat(specification): &#10;&#10;consolidated requirements and functional specification&#10;before refactoring and adding new features" />
     <MESSAGE value="feat(objects): &#10;&#10;abstract drawable&#10;&#10;drawable impl:&#10;line, text, dimension" />
     <MESSAGE value="feat(various): &#10;&#10;plugins on github&#10;git version control for drawings" />
-    <option name="LAST_COMMIT_MESSAGE" value="feat(various): &#10;&#10;plugins on github&#10;git version control for drawings" />
+    <MESSAGE value="feat(plugins): &#10;&#10;plugins on github&#10;git version control for drawings" />
+    <option name="LAST_COMMIT_MESSAGE" value="feat(plugins): &#10;&#10;plugins on github&#10;git version control for drawings" />
   </component>
   <component name="VgoProject">
     <integration-enabled>false</integration-enabled>

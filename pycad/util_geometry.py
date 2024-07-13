@@ -1,5 +1,5 @@
 import math
-from typing import List, Tuple
+from typing import List, Tuple, Optional, Protocol
 
 from PySide6.QtCore import QPoint, QRect
 from PySide6.QtGui import QPainter, QFontMetrics
@@ -24,12 +24,11 @@ def find_nearest_point(point_list: List[QPoint], p: QPoint) -> QPoint:
     return nearest_point
 
 
-def sort_points_on_line(line, points):
+def sort_points_on_line(line: 'HasSegment', points):
     def distance_to_start(p):
-        return math.hypot(p.x() - line.start_point.x(), p.y() - line.start_point.y())
+        return math.hypot(p.x() - line.segment.a.x(), p.y() - line.segment.a.y())
 
     return sorted(points, key=distance_to_start)
-
 
 
 def snap_to_angle(start_point, end_point):
@@ -45,7 +44,7 @@ def snap_to_angle(start_point, end_point):
     return snapped_end_point
 
 
-def _points_equal(start_point:QPoint, end_point:QPoint) -> bool:
+def _points_equal(start_point: QPoint, end_point: QPoint) -> bool:
     return abs(start_point.x() - end_point.x()) <= TOLERANCE and abs(start_point.y() - end_point.y()) <= TOLERANCE
 
 
@@ -74,8 +73,9 @@ def set_pen_width(painter, width):
     # Set the modified pen back to the painter
     painter.setPen(pen)
 
-def line_intersects_rect(line:Tuple[QPoint,QPoint], rect: QRect) -> bool:
-    start_point,end_point = line
+
+def line_intersects_rect(line: Tuple[QPoint, QPoint], rect: QRect) -> bool:
+    start_point, end_point = line
     # Check if either endpoint is inside the rectangle
     if rect.contains(start_point) or rect.contains(end_point):
         return True
@@ -84,6 +84,7 @@ def line_intersects_rect(line:Tuple[QPoint,QPoint], rect: QRect) -> bool:
     def lines_intersect(p1, p2, q1, q2):
         def ccw(a, b, c):
             return (c.y() - a.y()) * (b.x() - a.x()) > (b.y() - a.y()) * (c.x() - a.x())
+
         return ccw(p1, q1, q2) != ccw(p2, q1, q2) and ccw(p1, p2, q1) != ccw(p1, p2, q2)
 
     # Check intersection with each edge of the rectangle
@@ -105,8 +106,9 @@ def line_intersects_rect(line:Tuple[QPoint,QPoint], rect: QRect) -> bool:
 
     return False
 
-def line_contains_point(line:Tuple[QPoint,QPoint], point:QPoint) -> bool:
-    start_point,end_point = line
+
+def line_contains_point(line: Tuple[QPoint, QPoint], point: QPoint) -> bool:
+    start_point, end_point = line
     margin = 5
     x1, y1 = start_point.x(), start_point.y()
     x2, y2 = end_point.x(), end_point.y()
@@ -125,3 +127,56 @@ def get_text_dimensions(painter, text):
     width = metrics.horizontalAdvance(text)
     height = metrics.height()
     return width, height
+
+
+class Segment:
+    a: QPoint = QPoint(0, 0)
+    b: QPoint = QPoint(0, 0)
+
+    def __init__(self, a: QPoint, b: QPoint):
+        self.a = a
+        self.b = b
+
+    def set(self, a: QPoint, b: QPoint) -> 'Segment':
+        self.a = a
+        self.b = b
+        return self
+
+    def is_in(self, rect: QRect) -> bool:
+        return rect.contains(self.a) or rect.contains(self.b)
+
+    def intersects(self, rect: QRect) -> bool:
+        return line_intersects_rect((self.a, self.b), rect)
+
+    def contains_point(self, point):
+        return line_contains_point((self.a, self.b), point)
+
+    def intersect(self, other: 'Segment') -> Optional[QPoint]:
+        def ccw(A, B, C):
+            return (C.y() - A.y()) * (B.x() - A.x()) > (B.y() - A.y()) * (C.x() - A.x())
+
+        A = self.a
+        B = self.b
+        C = other.a
+        D = other.b
+
+        if ccw(A, C, D) != ccw(B, C, D) and ccw(A, B, C) != ccw(A, B, D):
+            denom = (A.x() - B.x()) * (C.y() - D.y()) - (A.y() - B.y()) * (C.x() - D.x())
+            if denom == 0:
+                return None
+            intersect_x = ((A.x() * B.y() - A.y() * B.x()) * (C.x() - D.x()) - (A.x() - B.x()) * (
+                    C.x() * D.y() - C.y() * D.x())) / denom
+            intersect_y = ((A.x() * B.y() - A.y() * B.x()) * (C.y() - D.y()) - (A.y() - B.y()) * (
+                    C.x() * D.y() - C.y() * D.x())) / denom
+            return QPoint(int(intersect_x), int(intersect_y))
+        return None
+
+
+class HasSegment(Protocol):
+    segment: Segment
+
+
+class HasPoints(Protocol):
+    points: List[QPoint] = []
+    moving_point: QPoint = None
+    max_points: int = 2

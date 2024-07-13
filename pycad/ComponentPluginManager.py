@@ -1,173 +1,179 @@
+import subprocess
+import sys
+from typing import List, Union
+
 from PySide6.QtWidgets import (QApplication, QDialog, QVBoxLayout, QHBoxLayout,
-                               QListWidget, QListWidgetItem, QCheckBox, QPushButton, QLabel, QMessageBox, QTableWidget, QTableWidgetItem, QHeaderView)
-from PySide6.QtCore import Qt, Signal
+                               QTabWidget, QLineEdit, QListWidget, QTextEdit,
+                               QPushButton, QLabel, QListWidgetItem, QWidget, QMessageBox, QGridLayout)
+from PySide6.QtCore import Qt, Signal, QPoint
 import requests
+import json
 import os
 import importlib.util
-import hashlib
-import json
 
+from pycad import Plugin, Drawable
+from pycad.ComponentLayers import LayerModel
 from pycad.Plugin import PluginInterface
 
 PLUGINS_DIR = 'plugins'
 VALIDATION_URL = 'https://raw.githubusercontent.com/alfu32/pycad/main/validatedplugins.json'
 
-class PluginManagerDialog(QDialog):
-    closed = Signal(bool)  # Define a custom signal with a generic object type
 
-    def closeEvent(self, event):
-        self.closed.emit(True)
+class PluginManager(QDialog):
+    closed = Signal(bool)
+    github_plugins=[]
 
-    def __init__(self, parent=None,filename:str=""):
-        super(PluginManagerDialog, self).__init__(parent)
-
-        self.setWindowTitle(f"PyCAD24 - Plugin Manager {filename}")
-        self.setGeometry(100, 100, 300, 600)
-
-        # Create plugins directory if it doesn't exist
-        if not os.path.exists(PLUGINS_DIR):
-            os.makedirs(PLUGINS_DIR)
+    def __init__(self, filename: str, parent:QWidget = None):
+        super(PluginManager, self).__init__(parent)
+        self.setWindowTitle(f"pycad24 - Plugin Manager - {filename}")
+        self.setGeometry(100, 100, 800, 600)
 
         # Layouts
-        main_layout = QVBoxLayout()
-        plugins_layout = QVBoxLayout()
+        main_layout = QHBoxLayout()
+        tab_widget = QTabWidget()
+
+        # GitHub Tab
+        github_tab = QWidget()
+        github_layout = QVBoxLayout()
+
+        self.search_box = QLineEdit()
+        self.search_box.setPlaceholderText("Search for GitHub plugins")
+        self.search_box.textChanged.connect(self.search_github_plugins)
+
+        self.github_plugins_list = QListWidget()
+        self.github_plugins_list.currentItemChanged.connect(self.display_github_plugin_details)
+
+        github_layout.addWidget(self.search_box)
+        github_layout.addWidget(self.github_plugins_list)
+        github_tab.setLayout(github_layout)
+
+        # Local Tab
+        local_tab = QWidget()
+        local_layout = QVBoxLayout()
+
+        self.local_plugins_list = QListWidget()
+        self.local_plugins_list.currentItemChanged.connect(self.display_local_plugin_details)
+        self.load_local_plugins()
+
+        local_layout.addWidget(self.local_plugins_list)
+        local_tab.setLayout(local_layout)
+
+        tab_widget.addTab(github_tab, "GitHub")
+        tab_widget.addTab(local_tab, "Local")
+
+        # Plugin Details
+        details_layout = QVBoxLayout()
+
+        self.plugin_name_label = QLabel("Plugin Name")
+        self.plugin_short_description_label = QLabel("Short Description")
+
+        self.install_button = QPushButton("Install")
+        self.install_button.clicked.connect(self.install_plugin)
+        self.uninstall_button = QPushButton("Uninstall")
+        self.uninstall_button.clicked.connect(self.uninstall_plugin)
+
+        details_layout.addWidget(self.plugin_name_label)
+        details_layout.addWidget(self.plugin_short_description_label)
+
         button_layout = QHBoxLayout()
+        button_layout.addWidget(self.install_button)
+        button_layout.addWidget(self.uninstall_button)
+        details_layout.addLayout(button_layout)
 
-        # Plugins List
-        self.plugins_table = QTableWidget()
-        self.plugins_table.setColumnCount(3)
-        self.plugins_table.setHorizontalHeaderLabels(["Plugin", "Description", "Validated"])
-        self.plugins_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.load_plugins()
+        self.plugin_description_text = QTextEdit()
+        self.plugin_description_text.setReadOnly(True)
+        details_layout.addWidget(self.plugin_description_text)
 
-        # Load Button
-        self.load_button = QPushButton("Load Selected Plugins")
-        self.load_button.clicked.connect(self.load_selected_plugins)
-
-        # Adding widgets to layouts
-        plugins_layout.addWidget(QLabel("Available Plugins"))
-        plugins_layout.addWidget(self.plugins_table)
-
-        button_layout.addWidget(self.load_button)
-
-        main_layout.addLayout(plugins_layout)
-        main_layout.addLayout(button_layout)
+        main_layout.addWidget(tab_widget)
+        main_layout.addLayout(details_layout)
 
         self.setLayout(main_layout)
 
-    def load_plugins(self):
-        self.plugins_table.setRowCount(0)
-        response = requests.get('https://api.github.com/search/repositories?q=pycad24-plugin')
-        local_plugins = self.get_local_plugins()
-        validated_plugins = self.get_validated_plugins()
+    def search_github_plugins(self, query):
+        self.github_plugins_list.clear()
+        if query:
+            response = requests.get(f"https://api.github.com/search/repositories?q=pycad24-plugin-{query}")
+            if response.status_code == 200:
+                plugins = response.json()["items"][:10]
+                for plugin in plugins:
+                    self.github_plugins_list.addItem(f"{plugin['url'].replace('https://api.github.com/repos/','')} - {plugin['default_branch']} - {plugin['description']} - {plugin['license']['name']}")
 
-        if response.status_code == 200:
-            plugins = response.json().get('items', [])
-            for plugin in plugins:
-                plugin_name = f"github.{plugin['full_name'].replace('/', '.')}"
+    def load_local_plugins(self):
+        # Load local plugins (for simplicity, assumed to be in the current directory)
+        self.local_plugins_list.clear()
+        for item in os.listdir("."):
+            if item.startswith("pycad24-plugin-"):
+                self.local_plugins_list.addItem(item)
 
-                print(f"loading plugin {plugin_name}")
-                is_local = plugin_name in local_plugins
-                checkbox = QCheckBox(f"{plugin['name']}")
-                checkbox.setObjectName(plugin['full_name'])
-                checkbox.setChecked(is_local)
+    def display_github_plugin_details(self, current, previous):
+        if current:
+            plugin_name = current.text().split(" - ")[0]
+            self.plugin_name_label.setText(plugin_name)
+            self.plugin_short_description_label.setText(current.text().split(" - ")[2])
+            # Fetching README from GitHub
+            readme_url = f"https://raw.githubusercontent.com/{plugin_name}/main/README.md"
+            response = requests.get(readme_url)
+            if response.status_code == 200:
+                self.plugin_description_text.setText(response.text)
+            else:
+                self.plugin_description_text.setText("No description available.")
+            self.install_button.setEnabled(True)
+            self.uninstall_button.setEnabled(False)
 
-                validated = "No"
-                plugin_info = next((item for item in validated_plugins if item['name'] == plugin_name), None)
+    def display_local_plugin_details(self, current, previous):
+        if current:
+            plugin_name = current.text()
+            self.plugin_name_label.setText(plugin_name)
+            self.plugin_short_description_label.setText("")
+            # Fetching README locally
+            readme_path = os.path.join(plugin_name, "README.md")
+            if os.path.exists(readme_path):
+                with open(readme_path, "r") as file:
+                    self.plugin_description_text.setText(file.read())
+            else:
+                self.plugin_description_text.setText("No description available.")
+            self.install_button.setEnabled(False)
+            self.uninstall_button.setEnabled(True)
 
-                print(f"plugin_info {plugin_info}")
+    def install_plugin(self):
+        plugin_name = self.plugin_name_label.text()
+        github_url = f"git+https://github.com/{plugin_name}.git"
+        result = subprocess.run(["python", "-m", "pip", "install", github_url])
 
-                #plugin_info = [info for info in validated_plugins if ]
+        # Get the output
+        output = result.stdout
+        error_output = result.stderr
 
+        # Print the output
+        print("install_plugin Output:", output)
+        print("install_plugin Error Output:", error_output)
+        self.load_local_plugins()
 
-                if plugin_info :
-                    plugin_path = os.path.join(PLUGINS_DIR, f"{plugin_name}.py")
-                    verification_id = plugin_info['verification_id']
-                    file_sha = self.chk(plugin_path)
-                    print(f"comparing sha of {plugin_path} with validation id of {plugin_name} \nverification_id {verification_id}\n file sha     {file_sha}")
-                    if file_sha == verification_id:
-                        validated = "Yes"
+    def uninstall_plugin(self):
+        plugin_name = self.plugin_name_label.text()
+        result = subprocess.run(["python", "-m", "pip", "uninstall", "-y", plugin_name])
 
-                row_position = self.plugins_table.rowCount()
-                self.plugins_table.insertRow(row_position)
-                self.plugins_table.setCellWidget(row_position, 0, checkbox)
-                self.plugins_table.setItem(row_position, 1, QTableWidgetItem(plugin['description']))
-                self.plugins_table.setItem(row_position, 2, QTableWidgetItem(validated))
-        else:
-            QMessageBox.warning(self, "Error", "Failed to fetch plugins from GitHub.")
+        # Get the output
+        output = result.stdout
+        error_output = result.stderr
 
-    def get_local_plugins(self):
-        return {file for file in os.listdir(PLUGINS_DIR) if file.endswith('.py')}
+        # Print the output
+        print("uninstall_plugin Output:", output)
+        print("uninstall_plugin Error Output:", error_output)
 
-    def get_validated_plugins(self):
-        response = requests.get(VALIDATION_URL)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            QMessageBox.warning(self, "Error", "Failed to fetch validated plugins.")
-            return []
-    def chk(self,plugin_path:str) -> str:
-        if os.path.exists(plugin_path):
-            with open(plugin_path, 'rb') as file:
-                file_data = file.read()
-                sha1_hash = hashlib.sha1(file_data).hexdigest()
-                return sha1_hash
-        return "000"
+        self.load_local_plugins()
 
-    def validate_plugin(self, plugin_name, verification_id):
-        plugin_path = os.path.join(PLUGINS_DIR, plugin_name)
-        return self.chk(plugin_path) == verification_id
+    def closeEvent(self, event):
+        self.closed.emit(True)
+        super(PluginManager, self).closeEvent(event)
 
-    def load_selected_plugins(self):
-        for index in range(self.plugins_table.rowCount()):
-            checkbox = self.plugins_table.cellWidget(index, 0)
-            if isinstance(checkbox,QCheckBox) and checkbox.isChecked():
-                plugin_full_name = checkbox.objectName()
-                self.download_and_load_plugin(plugin_full_name)
-
-    def download_and_load_plugin(self, full_name):
-        plugin_url = f"https://raw.githubusercontent.com/{full_name}/main/plugin.py"
-        readme_url = f"https://raw.githubusercontent.com/{full_name}/main/README.md"
-        plugin_name = f"github.{full_name.replace('/', '.')}.py"
-        readme_name = f"github.{full_name.replace('/', '.')}.md"
-
-        # Download plugin.py
-        response = requests.get(plugin_url)
-        if response.status_code == 200:
-            plugin_path = os.path.join(PLUGINS_DIR, plugin_name)
-            with open(plugin_path, 'w') as file:
-                file.write(response.text)
-        else:
-            QMessageBox.warning(self, "Error", f"Failed to download plugin: {full_name}")
-
-        # Download README.md
-        response = requests.get(readme_url)
-        if response.status_code == 200:
-            readme_path = os.path.join(PLUGINS_DIR, readme_name)
-            with open(readme_path, 'w') as file:
-                file.write(response.text)
-
-        # Load plugin
-        self.load_plugin(plugin_name)
-
-    def load_plugin(self, plugin_name):
-        plugin_path = os.path.join(PLUGINS_DIR, plugin_name)
-        spec = importlib.util.spec_from_file_location(plugin_name.replace('.', '_'), plugin_path)
-        plugin_module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(plugin_module)
-        for name, cls in plugin_module.__dict__.items():
-            if isinstance(cls, type) and issubclass(cls, PluginInterface) and cls is not PluginInterface:
-                plugin_instance = cls.get_instance()
-                if isinstance(plugin_instance, PluginInterface):
-                    # plugin_instance.init_ui()
-                    print(f"plugin {name} loaded :::: {plugin_instance}")
-                else:
-                    QMessageBox.warning(self, "Error", "The plugin does not conform to the PluginInterface.")
-                break
 
 if __name__ == "__main__":
     import sys
+
     app = QApplication(sys.argv)
-    window = PluginManagerDialog()
+
+    window = PluginManager("example.dxf")
     window.show()
+
     sys.exit(app.exec())

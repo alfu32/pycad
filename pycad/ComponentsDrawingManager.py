@@ -1,6 +1,7 @@
+import math
 from typing import List, Tuple
 
-from PySide6.QtCore import QPoint, Qt, Signal, QRect
+from PySide6.QtCore import QPoint, Qt, Signal, QRect, QPointF
 from PySide6.QtGui import QMouseEvent, QPainter, QFont, QTransform, QPen
 from PySide6.QtWidgets import QWidget, QInputDialog
 
@@ -17,9 +18,11 @@ from pycad.util_math import distance, floor_to_nearest, ceil_to_nearest
 
 class DrawingManager(QWidget):
     changed = Signal(object)  # Define a custom signal with a generic object type
+    number_input_changed = Signal(str)  # Define a custom signal with a generic object type
 
     def __init__(self, filename: str):
         super().__init__()
+        self.setFocusPolicy(Qt.StrongFocus)
         self.setMouseTracking(True)
         self.setCursor(Qt.BlankCursor)
         self.layers = [LayerModel(name="0")]
@@ -37,6 +40,7 @@ class DrawingManager(QWidget):
         self.screen_point_snapped = QPoint(0, 0)
         self.mode = "line"  # Default mode
         self.font_family = "Arial"  # Default mode
+        self.number_input = ""
 
     def set_mode(self, mode):
         self.mode = mode
@@ -84,7 +88,7 @@ class DrawingManager(QWidget):
 
     def apply_snaps(self, pos: QPoint) -> QPoint:
         p = QPoint(pos.x(), pos.y())
-        nearest_point = find_nearest_point([sp[1] for sp in self.get_snap_points( p )], pos)
+        nearest_point = find_nearest_point([sp[1] for sp in self.get_snap_points(p)], pos)
         if nearest_point is not None and distance(nearest_point, pos) <= (self.snapDistance / self.zoom_factor):
             p = QPoint(nearest_point.x(), nearest_point.y())
         self.model_point_snapped = QPoint(p.x(), p.y())
@@ -107,28 +111,16 @@ class DrawingManager(QWidget):
 
     def mousePressEvent(self, event: QMouseEvent):
         self.update_mouse_positions(event)
-        if event.button() == Qt.LeftButton:
-            layer = self.current_layer()
-            self.current_drawable = self.create_drawable(
-                self.model_point_snapped,
-                self.model_point_snapped,
-            )
-        elif event.button() == Qt.RightButton:
-            layer = self.current_layer()
-            for line in layer.drawables:
-                if line.contains_point(self.model_point_raw):
-                    layer.drawables.remove(line)
-                    self.update()
-        self.changed.emit(self.layers)
 
     def mouseMoveEvent(self, event):
         self.update_mouse_positions(event)
-        if self.current_drawable:
+        if self.current_drawable is not None:
             end_point = self.model_point_snapped
             if event.modifiers() & Qt.ControlModifier:
-                end_point = snap_to_angle(self.current_drawable.start_point, end_point)
-            self.current_drawable.end_point = end_point
+                end_point = snap_to_angle(self.current_drawable.segment.a, end_point)
+            self.current_drawable.segment.b = end_point
             # Update line color and width to match the current layer
+            # TODO move to a layerChanged event listener
             layer = self.layers[self.current_layer_index]
             self.current_drawable.color = layer.color
             self.current_drawable.width = layer.lineweight
@@ -136,18 +128,74 @@ class DrawingManager(QWidget):
 
     def mouseReleaseEvent(self, event):
         self.update_mouse_positions(event)
-        if self.current_drawable:
-            end_point = self.model_point_snapped
-            if event.modifiers() & Qt.ControlModifier:
-                end_point = snap_to_angle(self.current_drawable.start_point, end_point)
-            self.current_drawable.end_point = end_point
-            if isinstance(self.current_drawable, Text):
-                text, ok = QInputDialog.getText(self, 'Text', ':')
-                self.current_drawable.text = text
+        end_point = self.model_point_snapped
+        if event.modifiers() & Qt.ControlModifier:
+            end_point = snap_to_angle(self.current_drawable.segment.a, end_point)
+        if event.button() == Qt.LeftButton:
+            layer = self.current_layer()
+            if self.current_drawable is None:
+                self.current_drawable = self.create_drawable(
+                    self.model_point_snapped,
+                    self.model_point_snapped,
+                )
+            else:
+                self.current_drawable.segment.b = end_point
+                # self.current_drawable.push(self.model_point_snapped)
+        elif event.button() == Qt.RightButton:
+            layer = self.current_layer()
+            for line in layer.drawables:
+                if line.contains_point(self.model_point_raw):
+                    layer.drawables.remove(line)
+                    self.update()
+        if self.current_drawable is not None and self.current_drawable.is_done():
             self.layers[self.current_layer_index].add_drawable(self.current_drawable)
             self.current_drawable = None
-        self.changed.emit(self.layers)
+            self.number_input = ""
+            self.changed.emit(self.layers)
+            self.number_input_changed.emit(self.number_input)
         self.update()
+
+    def keyPressEvent(self, event):
+        key = event.key()
+        print(hex(key), flush=True)
+        print(event.keyCombination(), flush=True)
+
+    def keyReleaseEvent(self, event):
+        key = event.key()
+        print(hex(key), flush=True)
+
+        print(event.keyCombination(), flush=True)
+        if key == Qt.Key_Escape:
+            self.current_drawable = None
+            self.number_input = ""
+            self.number_input_changed.emit(self.number_input)
+        elif key == Qt.Key_Backspace:
+            self.number_input = self.number_input[:-1]
+            self.number_input_changed.emit(self.number_input)
+        elif key in (
+                Qt.Key_0, Qt.Key_1, Qt.Key_2, Qt.Key_3, Qt.Key_4, Qt.Key_5, Qt.Key_6, Qt.Key_7, Qt.Key_8, Qt.Key_9):
+            self.number_input += chr(key)
+            self.number_input_changed.emit(self.number_input)
+        elif key == Qt.Key_Period:
+            if '.' not in self.number_input:
+                self.number_input += '.'
+                self.number_input_changed.emit(self.number_input)
+        elif key in (Qt.Key_Return, Qt.Key_Enter):
+            if self.current_drawable is not None:
+                a = self.current_drawable.segment.a
+                new_length = int(self.number_input)
+                end_point = self.model_point_snapped
+                uw = QPointF(end_point.x() - a.x(),
+                             end_point.y() - a.y())
+                length = math.sqrt(uw.x() ** 2 + uw.y() ** 2)
+                end_point = QPoint(a.x()+int(uw.x() * new_length / length), a.y()+int(uw.y() * new_length / length))
+                self.current_drawable.segment.b = end_point
+
+                self.layers[self.current_layer_index].add_drawable(self.current_drawable)
+                self.current_drawable = None
+                self.number_input = ""
+                self.changed.emit(self.layers)
+                self.number_input_changed.emit(self.number_input)
 
     def paintEvent(self, event):
         painter: QPainter = QPainter(self)
@@ -157,21 +205,21 @@ class DrawingManager(QWidget):
             drawable.update(painter)
 
         # Draw endpoint markers
-        for hotspot in self.get_hotspots( self.model_point_raw ):
-            cls,p,updater = hotspot
+        for hotspot in self.get_hotspots(self.model_point_raw):
+            cls, p, updater = hotspot
             if isinstance(p, QPoint):
                 draw_rect(painter, self.map_to_view(p))
 
         # Draw endpoint markers
-        for snap_point in self.get_snap_points( self.model_point_raw ):
-            cls,p = snap_point
+        for snap_point in self.get_snap_points(self.model_point_raw):
+            cls, p = snap_point
             if isinstance(p, QPoint):
-                draw_hotspot_class(painter,cls, self.map_to_view(p))
+                draw_hotspot_class(painter, cls, self.map_to_view(p))
 
         if self.current_drawable:
-            draw_rect(painter, self.map_to_view(self.current_drawable.start_point))
-            if isinstance(self.current_drawable.end_point, QPoint):
-                draw_rect(painter, self.map_to_view(self.current_drawable.end_point))
+            draw_rect(painter, self.map_to_view(self.current_drawable.segment.a))
+            if isinstance(self.current_drawable.segment.b, QPoint):
+                draw_rect(painter, self.map_to_view(self.current_drawable.segment.b))
 
         transform = QTransform()
         transform.translate(self.offset.x(), self.offset.y())
@@ -200,34 +248,34 @@ class DrawingManager(QWidget):
         painter.setTransform(QTransform())
         draw_cursor(painter, self.screen_point_snapped, self.snapDistance)
 
-    def get_drawables(self, rect:QRect=None) -> List[Drawable]:
-        drawables:List[Drawable] = []
+    def get_drawables(self, rect: QRect = None) -> List[Drawable]:
+        drawables: List[Drawable] = []
         for layer in self.layers:
             if not layer.visible:
                 continue
             for drawable in layer.drawables:
                 if rect is None or rect is not None and drawable.intersects(rect):
-                    drawables.append( drawable )
+                    drawables.append(drawable)
         return drawables
 
-    def get_hotspots(self, pos:QPoint):
-        rect:QRect =QRect(pos.x()-50,pos.y()-50,100,100)
-        hotspots:List[Tuple[HotspotClasses,QPoint,HotspotHandler]] = []
+    def get_hotspots(self, pos: QPoint):
+        rect: QRect = QRect(pos.x() - 50, pos.y() - 50, 100, 100)
+        hotspots: List[Tuple[HotspotClasses, QPoint, HotspotHandler]] = []
         for drawable in self.get_drawables(rect):
             for hs in drawable.get_hotspots():
-                hotspots.append( hs )
+                hotspots.append(hs)
         return hotspots
 
-    def get_snap_points(self, pos:QPoint) -> List[Tuple[HotspotClasses,QPoint]]:
-        snap_points:List[Tuple[HotspotClasses,QPoint]] = []
-        rect:QRect =QRect(pos.x()-50,pos.y()-50,100,100)
+    def get_snap_points(self, pos: QPoint) -> List[Tuple[HotspotClasses, QPoint]]:
+        snap_points: List[Tuple[HotspotClasses, QPoint]] = []
+        rect: QRect = QRect(pos.x() - 50, pos.y() - 50, 100, 100)
         p = pos
         X = p.x()
         Y = p.y()
         if pos is not None and self.flSnapGrid:
             snap_points.append((
                 HotspotClasses.GRID,
-                QPoint(floor_to_nearest(X, self.gridSpacing.x()),floor_to_nearest(Y, self.gridSpacing.y()))
+                QPoint(floor_to_nearest(X, self.gridSpacing.x()), floor_to_nearest(Y, self.gridSpacing.y()))
             ))
             snap_points.append((
                 HotspotClasses.GRID,
@@ -244,7 +292,7 @@ class DrawingManager(QWidget):
         if self.flSnapPoints:
             for drawable in self.get_drawables(rect):
                 for sp in drawable.get_snap_points():
-                    snap_points.append( sp )
+                    snap_points.append(sp)
         return snap_points
 
     def get_all_lines(self):
@@ -259,12 +307,11 @@ class DrawingManager(QWidget):
         dy = self.gridSpacing.y()
         NX = dx * 10
         NY = dy * 10
-        cx = round(center.x() / NX ) * NX
-        cy = round(center.y() / NY ) * NY
+        cx = round(center.x() / NX) * NX
+        cy = round(center.y() / NY) * NY
         for ix in range(3):
             for iy in range(3):
                 draw_point(painter, QPoint(cx + ix * dx, cy + iy * dy), color)
                 draw_point(painter, QPoint(cx + ix * dx, cy - iy * dy), color)
                 draw_point(painter, QPoint(cx - ix * dx, cy + iy * dy), color)
                 draw_point(painter, QPoint(cx - ix * dx, cy - iy * dy), color)
-

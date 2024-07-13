@@ -3,6 +3,7 @@ from PySide6.QtGui import QColor, Qt
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QRadioButton, QLineEdit, QSpinBox, QPushButton, QLabel, QCheckBox, \
     QComboBox, QDialog, QVBoxLayout, QListWidget, QListWidgetItem, QColorDialog
 
+from pycad.Drawable import Drawable
 from pycad.DrawableLineImpl import Line, split_line_by_points
 from pycad.constants import linetypes
 from pycad.util_geometry import sort_points_on_line
@@ -18,9 +19,9 @@ class LayerModel:
         self.drawables = []
         self.flAutoCut = False
 
-    def add_drawable(self, line: Line):
-        self.drawables.append(line)
-        if isinstance(line, Line):
+    def add_drawable(self, dw: Drawable):
+        self.drawables.append(dw)
+        if isinstance(dw, Line):
             self.cleanup()
 
     def cleanup(self):

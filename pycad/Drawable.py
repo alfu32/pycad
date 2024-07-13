@@ -1,12 +1,14 @@
 import math
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import List, Tuple, Callable
+from typing import List, Tuple, Callable, Optional
 
 from PySide6.QtGui import QPainter
 from PySide6.QtCore import QPoint, QRect, Signal
 
 from ezdxf.document import Drawing as DXFDrawing
+
+from pycad.util_geometry import Segment, HasSegment
 
 
 class HotspotClasses(Enum):
@@ -28,8 +30,10 @@ class Drawable(ABC):
     max_points: int = 2
 
     def __init__(self, start_point: QPoint, end_point: QPoint = None):
-        self.start_point = start_point
-        self.end_point = end_point
+        self.segment: Segment = Segment(QPoint(0, 0), QPoint(0, 0))
+        self.segment.set(start_point,end_point)
+        self.points.append(start_point)
+        self.points.append(end_point)
 
     @abstractmethod
     def isin(self, rect: QRect) -> bool:
@@ -52,9 +56,8 @@ class Drawable(ABC):
     def set_moving_point(self, point: QPoint):
         self.moving_point = point
 
-    @abstractmethod
-    def intersect(self, other) -> bool:
-        return False
+    def intersect(self, other: HasSegment) -> Optional[QPoint]:
+        return None
 
     @abstractmethod
     def intersects(self, rect: QRect) -> bool:
@@ -89,4 +92,7 @@ class Drawable(ABC):
         pass
 
     def get_rotation(self):
-        return math.atan2(self.start_point.y() - self.end_point.y(), self.start_point.x() - self.end_point.x())
+        return math.atan2(self.segment.a.y() - self.segment.b.y(), self.segment.a.x() - self.segment.b.x())
+
+    def is_done(self) -> bool:
+        pass

@@ -1,7 +1,7 @@
 import math
 from abc import ABC
 
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 from PySide6.QtCore import QPoint, QRect, QPointF
 from PySide6.QtGui import QPainter
@@ -11,75 +11,77 @@ from ezdxf.document import Drawing as DXFDrawing
 from ezdxf.document import Modelspace as DXFModelspace
 from ezdxf.entities import Dimension as DXFDimension
 from pycad.util_geometry import line_intersects_rect, line_contains_point, get_text_dimensions, \
-    get_pen_width, set_pen_width, mod
+    get_pen_width, set_pen_width, mod, HasSegment, Segment
 
 
 class Dimension(Drawable, ABC):
 
     def __init__(self, start_point: QPoint, end_point: QPoint = None):
         super(Drawable, self).__init__()
-        self.start_point = start_point
-        self.end_point = end_point
+        self.segment: Segment = Segment(start_point,end_point)
+        self.segment.set(start_point,end_point)
         self.offset_distance = 25
+    def is_done(self):
+        return self.segment.a != self.segment.b
 
     def isin(self, rect: QRect) -> bool:
-        return rect.contains(self.start_point) or rect.contains(self.end_point)
+        return self.segment.is_in(rect)
 
     def intersects(self, rect: QRect) -> bool:
-        return line_intersects_rect((self.start_point, self.end_point), rect)
+        return self.segment.intersects(rect)
 
     def set_start_point(self, value: QPoint):
-        self.start_point = value
+        self.segment.set(value, self.segment.b)
 
     def set_send_point(self, value: QPoint):
-        self.end_point = value
+        self.segment.set(self.segment.a, value)
 
     def get_hotspots(self) -> List[Tuple[HotspotClasses, QPoint, HotspotHandler]]:
         return [
-            (HotspotClasses.ENDPOINT, self.start_point, self.set_start_point),
-            (HotspotClasses.ENDPOINT, self.end_point, self.set_send_point),
+            (HotspotClasses.ENDPOINT, self.segment.a, self.set_start_point),
+            (HotspotClasses.ENDPOINT, self.segment.b, self.set_send_point),
         ]
 
     def get_snap_points(self) -> List[Tuple[HotspotClasses, QPoint]]:
         return [
-            (HotspotClasses.ENDPOINT, self.start_point),
-            (HotspotClasses.MIDPOINT, (self.start_point + self.end_point) / 2),
-            (HotspotClasses.ENDPOINT, self.end_point),
+            (HotspotClasses.ENDPOINT, self.segment.a),
+            (HotspotClasses.MIDPOINT, (self.segment.a + self.segment.b) / 2),
+            (HotspotClasses.ENDPOINT, self.segment.b),
         ]
 
     def update(self, painter: QPainter):
         pass
 
     def contains_point(self, point):
-        return line_contains_point((self.start_point, self.end_point), point)
+        return line_contains_point((self.segment.a, self.segment.b), point)
 
-    def intersect(self, other) -> bool:
-        return False
+    def intersect(self, other: HasSegment) -> Optional[QPoint]:
+        return None
 
     def is_empty(self, threshold=1.0) -> bool:
         return False
 
     def get_rotation(self):
-        return math.atan2(self.start_point.y() - self.end_point.y(), self.start_point.x() - self.end_point.x())
-        # return math.atan2(self.end_point.y() - self.start_point.y(), self.start_point.x() - self.end_point.x())
-        # return math.atan2(self.end_point.y() - self.start_point.y(), self.end_point.x() - self.start_point.x())
+        return math.atan2(self.segment.a.y() - self.segment.b.y(), self.segment.a.x() - self.segment.b.x())
+        # return math.atan2(self.segment.b.y() - self.segment.a.y(), self.segment.a.x() - self.segment.b.x())
+        # return math.atan2(self.segment.b.y() - self.segment.a.y(), self.segment.b.x() - self.segment.a.x())
 
     def draw(self, painter: QPainter):
-        start_point = self.offset_point(self.start_point, self.offset_distance)
-        end_point = self.offset_point(self.end_point, self.offset_distance)
+        start_point = self.offset_point(self.segment.a, self.offset_distance)
+        end_point = self.offset_point(self.segment.b, self.offset_distance)
         rotation = (self.get_rotation() + math.pi) * 180 / math.pi
         dir = -1 if 90 < rotation <= 270 else 0.5
         text = f"{self.length():.2f} ({rotation:.2f} [{dir}])"
         text = f"{self.length():.1f}"
         tw, th = get_text_dimensions(painter, text)
         mid_point = QPoint(
-            (start_point.x() + self.end_point.x()) / 2,
-            (start_point.y() + self.end_point.y()) / 2,
+            (start_point.x() + self.segment.b.x()) / 2,
+            (start_point.y() + self.segment.b.y()) / 2,
         )
         # Placeholder for drawing dimensions; real implementation may vary
         painter.drawLine(start_point.x(), start_point.y(), end_point.x(), end_point.y())
-        painter.drawLine(self.start_point.x(), self.start_point.y(), start_point.x(), start_point.y())
-        painter.drawLine(self.end_point.x(), self.end_point.y(), end_point.x(), end_point.y())
+        painter.drawLine(self.segment.a.x(), self.segment.a.y(), start_point.x(), start_point.y())
+        painter.drawLine(self.segment.b.x(), self.segment.b.y(), end_point.x(), end_point.y())
         pw = get_pen_width(painter)
         set_pen_width(painter, pw * 4)
         painter.drawLine(start_point.x() - 2, start_point.y() + 2, start_point.x() + 2, start_point.y() - 2)
@@ -104,11 +106,11 @@ class Dimension(Drawable, ABC):
         painter.restore()
 
     def length(self):
-        return math.hypot(self.start_point.x() - self.end_point.x(), self.start_point.y() - self.end_point.y())
+        return math.hypot(self.segment.a.x() - self.segment.b.x(), self.segment.a.y() - self.segment.b.y())
 
     def offset_point(self, p: QPoint, offset_distance=25) -> QPoint:
         # Calculate direction vector
-        direction_vector = QPointF(self.end_point.x() - self.start_point.x(), self.end_point.y() - self.start_point.y())
+        direction_vector = QPointF(self.segment.b.x() - self.segment.a.x(), self.segment.b.y() - self.segment.a.y())
 
         # Normalize the direction vector
         length = math.hypot(direction_vector.x(), direction_vector.y())
@@ -129,8 +131,8 @@ class Dimension(Drawable, ABC):
 
     def save_to_dxf(self, dxf_document: DXFDrawing, layer_name: str):
         msp: DXFModelspace = dxf_document.modelspace()
-        p1: QPoint = self.start_point
-        p2: QPoint = self.end_point
+        p1: QPoint = self.segment.a
+        p2: QPoint = self.segment.b
         dim = msp.add_linear_dim(
             base=(p1.x(), p1.y()),
             p1=(p1.x(), p1.y()),
