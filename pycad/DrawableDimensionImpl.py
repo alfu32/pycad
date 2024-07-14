@@ -184,3 +184,4 @@ class Dimension(Drawable, ABC):
         # start_point = QPoint(entity_data.dxf.text_midpoint.x, entity_data.dxf.text_midpoint.y)
         # end_point = QPoint(entity_data.dxf.insert.x, entity_data.dxf.insert.y)
         # return cls(start_point, end_point)
+        return dim
