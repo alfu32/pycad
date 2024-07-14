@@ -63,6 +63,7 @@ class Text(Drawable, ABC):
         # self.segment.b = QPoint(start_point.x() + du.x(), start_point.y() + du.y())
         pass
 
+    # TODO remove 1000
     def set_next_point(self, point: QPoint):
         self.set_send_point(point)
         self.finished.emit(True)

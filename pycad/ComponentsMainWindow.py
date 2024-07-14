@@ -11,7 +11,7 @@ from ezdxf.sections.table import LayerTable
 from pycad.ComponentGitVersioningPanel import GitVersioningPanel
 from pycad.ComponentLayers import LayerManager, LayerModel
 from pycad.ComponentPluginManager import PluginManager
-from pycad.ComponentsDrawingManager import DrawingManager
+from pycad.ComponentsDrawingManager import DrawingManager, TextSignalData
 from pycad.DrawableDimensionImpl import Dimension
 from pycad.DrawableLineImpl import Line
 from pycad.DrawableTextImpl import Text
@@ -50,7 +50,7 @@ class MainWindow(QMainWindow):
         self.drawing_manager = DrawingManager(file)
         self.drawing_manager.setStyleSheet(self.dark_theme)
         self.drawing_manager.changed.connect(self.on_model_changed)
-        self.drawing_manager.number_input_changed.connect(self.on_number_input_changed)
+        self.drawing_manager.keyboard_input_changed.connect(self.on_keyboard_input_changed)
 
         self.layer_manager = LayerManager(self.drawing_manager, filename=file)
         self.layer_manager.setMaximumWidth(720)
@@ -108,10 +108,10 @@ class MainWindow(QMainWindow):
         # print(f"{model}", flush=True)
         self.save_dxf(self.temp_file)
 
-    def on_number_input_changed(self, text):
+    def on_keyboard_input_changed(self, data: TextSignalData):
         # print("model changed", flush=True)
         # print(f"{model}", flush=True)
-        self.statusBar().showMessage(f"Input: {text}")
+        self.statusBar().showMessage(f"Input: {data.text} {data.number}")
 
     def on_layer_manager_closed(self, value):
         self.layout_man_button.setChecked(False)

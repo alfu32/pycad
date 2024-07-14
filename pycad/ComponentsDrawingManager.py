@@ -1,4 +1,5 @@
 import math
+import re
 from typing import List, Tuple
 
 from PySide6.QtCore import QPoint, Qt, Signal, QRect, QPointF
@@ -16,9 +17,19 @@ from pycad.util_geometry import find_nearest_point, snap_to_angle
 from pycad.util_math import distance, floor_to_nearest, ceil_to_nearest
 
 
+class TextSignalData:
+    def __init__(self, i:str, t:str):
+        self.text = t
+        try:
+            cleaned_string = re.sub(r'[^0-9.]', '', i)
+            self.number = int(cleaned_string)
+        except ValueError as x:
+            self.number = 0
+
+
 class DrawingManager(QWidget):
     changed = Signal(object)  # Define a custom signal with a generic object type
-    number_input_changed = Signal(str)  # Define a custom signal with a generic object type
+    keyboard_input_changed = Signal(object)  # Define a custom signal with a generic object type
 
     def __init__(self, filename: str):
         super().__init__()
@@ -41,6 +52,7 @@ class DrawingManager(QWidget):
         self.mode = "line"  # Default mode
         self.font_family = "Arial"  # Default mode
         self.number_input = ""
+        self.text_input = ""
 
     def set_mode(self, mode):
         self.mode = mode
@@ -149,8 +161,9 @@ class DrawingManager(QWidget):
             self.layers[self.current_layer_index].add_drawable(self.current_drawable)
             self.current_drawable = None
             self.number_input = ""
+            self.text_input = ""
             self.changed.emit(self.layers)
-            self.number_input_changed.emit(self.number_input)
+            self.keyboard_input_changed.emit(TextSignalData(self.number_input, self.text_input))
         self.update()
 
     def keyPressEvent(self, event):
@@ -163,38 +176,60 @@ class DrawingManager(QWidget):
         print(hex(key), flush=True)
 
         print(event.keyCombination(), flush=True)
+        number_input = self.number_input
+        text_input = self.text_input
         if key == Qt.Key_Escape:
             self.current_drawable = None
-            self.number_input = ""
-            self.number_input_changed.emit(self.number_input)
+            number_input = ""
         elif key == Qt.Key_Backspace:
-            self.number_input = self.number_input[:-1]
-            self.number_input_changed.emit(self.number_input)
+            number_input = number_input[:-1]
         elif key in (
                 Qt.Key_0, Qt.Key_1, Qt.Key_2, Qt.Key_3, Qt.Key_4, Qt.Key_5, Qt.Key_6, Qt.Key_7, Qt.Key_8, Qt.Key_9):
-            self.number_input += chr(key)
-            self.number_input_changed.emit(self.number_input)
+            number_input += chr(key)
         elif key == Qt.Key_Period:
             if '.' not in self.number_input:
-                self.number_input += '.'
-                self.number_input_changed.emit(self.number_input)
-        elif key in (Qt.Key_Return, Qt.Key_Enter):
+                number_input += '.'
+
+        if key == Qt.Key_Escape:
+            text_input = ""
+        elif key == Qt.Key_Backspace:
+            text_input = text_input[:-1]
+        else:
+            try:
+                text_input += chr(key)
+            except ValueError as ve:
+                pass
+
+        if self.number_input != number_input or text_input != self.text_input:
+            self.number_input = number_input
+            self.text_input = text_input
+            self.keyboard_input_changed.emit(TextSignalData(self.number_input, self.text_input))
+
+        if self.current_drawable is not None:
+            if isinstance(self.current_drawable, Text):
+                self.current_drawable.text = self.text_input
+                self.update()
+                return
+
+        if key in (Qt.Key_Return, Qt.Key_Enter):
             if self.current_drawable is not None:
                 a = self.current_drawable.segment.a
-                new_length = int(self.number_input)
+                new_length = TextSignalData(self.number_input, self.text_input).number
                 end_point = self.model_point_snapped
                 uw = QPointF(end_point.x() - a.x(),
                              end_point.y() - a.y())
                 length = math.sqrt(uw.x() ** 2 + uw.y() ** 2)
-                end_point = QPoint(a.x()+int(uw.x() * new_length / length), a.y()+int(uw.y() * new_length / length))
+                end_point = QPoint(a.x() + int(uw.x() * new_length / length),
+                                   a.y() + int(uw.y() * new_length / length))
                 self.current_drawable.segment.b = end_point
                 self.current_drawable.push(end_point)
                 # TODO duplicated block FINALIZE_DRAWABLE_CONSTRUCTION
                 self.layers[self.current_layer_index].add_drawable(self.current_drawable)
                 self.current_drawable = None
                 self.number_input = ""
+                self.text_input = ""
                 self.changed.emit(self.layers)
-                self.number_input_changed.emit(self.number_input)
+                self.keyboard_input_changed.emit(TextSignalData(self.number_input, self.text_input))
 
     def paintEvent(self, event):
         painter: QPainter = QPainter(self)

@@ -50,6 +50,7 @@ class Drawable(ABC):
     def isin(self, rect: QRect) -> bool:
         pass
 
+    # TODO remove 1000
     @abstractmethod
     def update(self, painter: QPainter):
         pass
@@ -57,6 +58,7 @@ class Drawable(ABC):
     def build_is_finished(self) -> bool:
         return len(self.points) == self.max_points
 
+    # TODO remove 1000
     def set_next_point(self, point: QPoint):
         self.points.append(point)
         if self.build_is_finished():

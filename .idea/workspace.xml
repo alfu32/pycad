@@ -4,14 +4,14 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="25043644-4411-4e1b-9269-2b584d342d14" name="Changes" comment="fix(dimension): &#10;&#10;fix from_dxf">
+    <list default="true" id="25043644-4411-4e1b-9269-2b584d342d14" name="Changes" comment="feat(polyline): WIP&#10;&#10;polyline as plugin">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/example.dxf" beforeDir="false" afterPath="$PROJECT_DIR$/example.dxf" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pycad/ComponentsDrawingManager.py" beforeDir="false" afterPath="$PROJECT_DIR$/pycad/ComponentsDrawingManager.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pycad/DrawableDimensionImpl.py" beforeDir="false" afterPath="$PROJECT_DIR$/pycad/DrawableDimensionImpl.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pycad/ComponentsMainWindow.py" beforeDir="false" afterPath="$PROJECT_DIR$/pycad/ComponentsMainWindow.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pycad/Drawable.py" beforeDir="false" afterPath="$PROJECT_DIR$/pycad/Drawable.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pycad/DrawableLineImpl.py" beforeDir="false" afterPath="$PROJECT_DIR$/pycad/DrawableLineImpl.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pycad/DrawableTextImpl.py" beforeDir="false" afterPath="$PROJECT_DIR$/pycad/DrawableTextImpl.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pycad/util_geometry.py" beforeDir="false" afterPath="$PROJECT_DIR$/pycad/util_geometry.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -349,7 +349,15 @@
       <option name="project" value="LOCAL" />
       <updated>1720934003221</updated>
     </task>
-    <option name="localTasksCounter" value="30" />
+    <task id="LOCAL-00030" summary="feat(polyline): WIP&#10;&#10;polyline as plugin">
+      <option name="closed" value="true" />
+      <created>1720936141112</created>
+      <option name="number" value="00030" />
+      <option name="presentableId" value="LOCAL-00030" />
+      <option name="project" value="LOCAL" />
+      <updated>1720936141112</updated>
+    </task>
+    <option name="localTasksCounter" value="31" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -399,7 +407,8 @@
     <MESSAGE value="feat(various): &#10;&#10;#### plugins on github&#10;  - plugins is WIP ( loading logic is not entirely clear)&#10;#### git version control for drawings&#10;#### construction mode &#10;- changed from mouse down - drag, up to click,click ... &#10;#### number input while constructing an object&#10; - escape aborts current object" />
     <MESSAGE value="feat(builder): &#10;&#10;drawable builder interface through push(point)" />
     <MESSAGE value="fix(dimension): &#10;&#10;fix from_dxf" />
-    <option name="LAST_COMMIT_MESSAGE" value="fix(dimension): &#10;&#10;fix from_dxf" />
+    <MESSAGE value="feat(polyline): WIP&#10;&#10;polyline as plugin" />
+    <option name="LAST_COMMIT_MESSAGE" value="feat(polyline): WIP&#10;&#10;polyline as plugin" />
   </component>
   <component name="VgoProject">
     <integration-enabled>false</integration-enabled>

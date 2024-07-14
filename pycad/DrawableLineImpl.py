@@ -77,6 +77,7 @@ class Line(Drawable, ABC):
     def update(self, painter: QPainter):
         pass
 
+    # TODO remove 1000
     def set_next_point(self, point: QPoint):
         self.set_send_point(point)
         self.finished.emit(True)
