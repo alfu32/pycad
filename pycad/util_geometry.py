@@ -137,6 +137,12 @@ class Segment:
         self.a = a
         self.b = b
 
+    def set_a(self, p):
+        self.a = p
+
+    def set_b(self, p):
+        self.b = p
+
     def set(self, a: QPoint, b: QPoint) -> 'Segment':
         self.a = a
         self.b = b
@@ -170,6 +176,12 @@ class Segment:
                     C.x() * D.y() - C.y() * D.x())) / denom
             return QPoint(int(intersect_x), int(intersect_y))
         return None
+
+    def __eq__(self, other: 'Segment'):
+        if not isinstance(other, Segment):
+            return False
+        return (_points_equal(self.a, other.a) and _points_equal(self.b, other.b)) or \
+            (_points_equal(self.a, other.b) and _points_equal(self.b, other.a))
 
 
 class HasSegment(Protocol):

@@ -54,6 +54,7 @@ class Text(Drawable, ABC):
             (HotspotClasses.ENDPOINT, self.segment.b),
         ]
 
+    # TODO remove 1000
     def update(self, painter: QPainter):
         # start_point = self.segment.a
         # tw, th = get_text_dimensions(painter, self.text)

@@ -73,6 +73,7 @@ class Line(Drawable, ABC):
             (HotspotClasses.ENDPOINT, b),
         ]
 
+    # TODO remove 1000
     def update(self, painter: QPainter):
         pass
 

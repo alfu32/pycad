@@ -200,6 +200,8 @@ class DrawingManager(QWidget):
         painter: QPainter = QPainter(self)
         font = QFont(self.font_family, 12)  # 12 is the font size
         painter.setFont(font)
+
+        # TODO remove 1000
         for drawable in self.get_drawables():
             drawable.update(painter)
 
