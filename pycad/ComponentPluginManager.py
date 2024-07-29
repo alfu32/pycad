@@ -1,19 +1,10 @@
 import subprocess
-import sys
-from typing import List, Union
-
 from PySide6.QtWidgets import (QApplication, QDialog, QVBoxLayout, QHBoxLayout,
                                QTabWidget, QLineEdit, QListWidget, QTextEdit,
-                               QPushButton, QLabel, QListWidgetItem, QWidget, QMessageBox, QGridLayout)
-from PySide6.QtCore import Qt, Signal, QPoint
+                               QPushButton, QLabel, QWidget)
+from PySide6.QtCore import Signal
 import requests
-import json
 import os
-import importlib.util
-
-from pycad import Plugin, Drawable
-from pycad.ComponentLayers import LayerModel
-from pycad.Plugin import PluginInterface
 
 PLUGINS_DIR = 'plugins'
 VALIDATION_URL = 'https://raw.githubusercontent.com/alfu32/pycad/main/validatedplugins.json'
@@ -101,9 +92,10 @@ class PluginManager(QDialog):
     def load_local_plugins(self):
         # Load local plugins (for simplicity, assumed to be in the current directory)
         self.local_plugins_list.clear()
-        for item in os.listdir("."):
-            if item.startswith("pycad24-plugin-"):
-                self.local_plugins_list.addItem(item)
+        for item in os.listdir("plugins"):
+            if item.find(".pycad24-plugin-") > -1 and item.endswith(".py"):
+                nm = item[:-3]
+                self.local_plugins_list.addItem(nm)
 
     def display_github_plugin_details(self, current, previous):
         if current:
@@ -126,7 +118,8 @@ class PluginManager(QDialog):
             self.plugin_name_label.setText(plugin_name)
             self.plugin_short_description_label.setText("")
             # Fetching README locally
-            readme_path = os.path.join(plugin_name, "README.md")
+            readme_path = os.path.join("plugins",f"{plugin_name}.md")
+            print(f"reading {readme_path}")
             if os.path.exists(readme_path):
                 with open(readme_path, "r") as file:
                     self.plugin_description_text.setText(file.read())
@@ -173,7 +166,7 @@ if __name__ == "__main__":
 
     app = QApplication(sys.argv)
 
-    window = PluginManager("example.dxf")
+    window = PluginManager("---")
     window.show()
 
     sys.exit(app.exec())
