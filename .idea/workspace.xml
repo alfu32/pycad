@@ -5,13 +5,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="25043644-4411-4e1b-9269-2b584d342d14" name="Changes" comment="feat(polyline): WIP&#10;&#10;polyline as plugin">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/example.dxf" beforeDir="false" afterPath="$PROJECT_DIR$/example.dxf" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pycad/ComponentsDrawingManager.py" beforeDir="false" afterPath="$PROJECT_DIR$/pycad/ComponentsDrawingManager.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pycad/ComponentsMainWindow.py" beforeDir="false" afterPath="$PROJECT_DIR$/pycad/ComponentsMainWindow.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pycad/Drawable.py" beforeDir="false" afterPath="$PROJECT_DIR$/pycad/Drawable.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pycad/DrawableLineImpl.py" beforeDir="false" afterPath="$PROJECT_DIR$/pycad/DrawableLineImpl.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pycad/DrawableTextImpl.py" beforeDir="false" afterPath="$PROJECT_DIR$/pycad/DrawableTextImpl.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pycad/Plugin.py" beforeDir="false" afterPath="$PROJECT_DIR$/pycad/Plugin.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -48,23 +45,23 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.go.formatter.settings.were.checked": "true",
-    "RunOnceActivity.go.migrated.go.modules.settings": "true",
-    "git-widget-placeholder": "work",
-    "go.import.settings.migrated": "true",
-    "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "C:/Users/alferio/Development/test-qtpy/plugins",
-    "nodejs_package_manager_path": "npm",
-    "project.structure.last.edited": "Project",
-    "project.structure.proportion": "0.0",
-    "project.structure.side.proportion": "0.4597701",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.go.formatter.settings.were.checked&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.go.migrated.go.modules.settings&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;work&quot;,
+    &quot;go.import.settings.migrated&quot;: &quot;true&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/alferio/Development/test-qtpy/plugins&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Project&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.0&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.4597701&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Users\alferio\Development\test-qtpy\plugins" />
@@ -102,7 +99,8 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-python-sdk-09665e90c3a7-d3b881c8e49f-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-233.15026.15" />
+        <option value="bundled-jdk-9f38398b9061-39b83d9b5494-intellij.indexing.shared.core-IU-241.18034.62" />
+        <option value="bundled-js-predefined-1d06a55b98c1-0b3e54e931b4-JavaScript-IU-241.18034.62" />
       </set>
     </attachedChunks>
   </component>
@@ -116,6 +114,7 @@
       <updated>1719907205759</updated>
       <workItem from="1720215941754" duration="72000" />
       <workItem from="1720216074165" duration="36000" />
+      <workItem from="1722764579264" duration="7000" />
     </task>
     <task id="LOCAL-00001" summary="feat(init)">
       <option name="closed" value="true" />

@@ -15,6 +15,7 @@ from pycad.ComponentsDrawingManager import DrawingManager, TextSignalData
 from pycad.DrawableDimensionImpl import Dimension
 from pycad.DrawableLineImpl import Line
 from pycad.DrawableTextImpl import Text
+from pycad.Plugin import BasePlugin
 from pycad.constants import dxf_app_id, linetypes, lwindex, lwrindex
 from pycad.util_drawable import qcolor_to_dxf_color, get_true_color
 
@@ -36,6 +37,9 @@ class MainWindow(QMainWindow):
 
     def __init__(self, file: str, temp: str):
         super().__init__()
+        self.plugins: list[BasePlugin] = []
+        # TODO load plugins dynamically
+        
         self.setStyleSheet(self.light_theme)
         self.font_family = "Arial"
         self.dxf_file = file
@@ -191,21 +195,26 @@ class MainWindow(QMainWindow):
         self.plugin_manager_button.setChecked(False)
         control_layout.addWidget(self.plugin_manager_button)
 
-        self.line_mode_button = QPushButton("Line")
-        self.line_mode_button.setCheckable(True)
-        self.line_mode_button.setChecked(True)
-        self.line_mode_button.clicked.connect(self.set_line_mode)
-        control_layout.addWidget(self.line_mode_button)
+        # TODO load plugins dynamically
 
-        self.dimension_mode_button = QPushButton("Dimension")
-        self.dimension_mode_button.setCheckable(True)
-        self.dimension_mode_button.clicked.connect(self.set_dimension_mode)
-        control_layout.addWidget(self.dimension_mode_button)
+        # self.line_mode_button = QPushButton("Line")
+        # self.line_mode_button.setCheckable(True)
+        # self.line_mode_button.setChecked(True)
+        # self.line_mode_button.clicked.connect(self.set_line_mode)
+        # control_layout.addWidget(self.line_mode_button)
 
-        self.text_mode_button = QPushButton("Text")
-        self.text_mode_button.setCheckable(True)
-        self.text_mode_button.clicked.connect(self.set_text_mode)
-        control_layout.addWidget(self.text_mode_button)
+        # self.dimension_mode_button = QPushButton("Dimension")
+        # self.dimension_mode_button.setCheckable(True)
+        # self.dimension_mode_button.clicked.connect(self.set_dimension_mode)
+        # control_layout.addWidget(self.dimension_mode_button)
+
+        # self.text_mode_button = QPushButton("Text")
+        # self.text_mode_button.setCheckable(True)
+        # self.text_mode_button.clicked.connect(self.set_text_mode)
+        # control_layout.addWidget(self.text_mode_button)
+
+        for plugin in self.plugins:
+            control_layout.addWidget(plugin.ui)
 
         main_layout.addLayout(control_layout)
         main_layout.addWidget(self.drawing_manager)

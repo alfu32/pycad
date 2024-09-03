@@ -28,8 +28,9 @@ class BasePlugin:
         super().__init__()
         self.identifier = "plugin_base"
         self.name = "Base Plugin"
+        self.ui = self.init_ui_fragment()
 
-    def get_ui_fragment(self):
+    def init_ui_fragment(self) -> QWidget:
         button = QPushButton(f"Start {self.name}")
         return button
 
@@ -44,6 +45,12 @@ class BasePlugin:
 
     def draw(self, painter:QPainter,moving_point:QPoint):
         raise NotImplementedError(f"{self.identifier} must implement draw method")
+
+    def draw_screen(self, painter:QPainter,moving_point:QPoint):
+        raise NotImplementedError(f"{self.identifier} must implement draw_screen method")
+
+    def reset(self):
+        raise NotImplementedError(f"{self.identifier} must implement reset method")
 
     def destroy(self):
         pass
