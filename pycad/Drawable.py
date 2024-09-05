@@ -4,7 +4,7 @@ from enum import Enum
 from typing import List, Tuple, Callable, Optional
 
 from PySide6.QtGui import QPainter
-from PySide6.QtCore import QPoint, QRect, Signal
+from PySide6.QtCore import QPoint, QRect, Signal, QObject
 
 from ezdxf.document import Drawing as DXFDrawing
 
@@ -27,6 +27,7 @@ class Drawable(ABC):
     finished = Signal(bool)  # Define a custom signal with a generic object type
 
     def __init__(self):
+        #super(QObject, self).__init__()
         self.segment: Segment = Segment(QPoint(0, 0), QPoint(0, 0))
         self._points = 0
         self.points: List[QPoint] = []

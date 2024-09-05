@@ -4,14 +4,17 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="25043644-4411-4e1b-9269-2b584d342d14" name="Changes" comment="feat(polyline): WIP&#10;&#10;polyline as plugin">
+    <list default="true" id="25043644-4411-4e1b-9269-2b584d342d14" name="Changes" comment="feat(text-input): WIP&#10;&#10;added second buffer getting text from keyboard">
+      <change afterPath="$PROJECT_DIR$/pycad/FailsafeOperations.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/pycad/TextSignalData.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/example.dxf" beforeDir="false" afterPath="$PROJECT_DIR$/example.dxf" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pycad/ComponentPluginManager.py" beforeDir="false" afterPath="$PROJECT_DIR$/pycad/ComponentPluginManager.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pycad/ComponentsDrawingManager.py" beforeDir="false" afterPath="$PROJECT_DIR$/pycad/ComponentsDrawingManager.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pycad/ComponentsMainWindow.py" beforeDir="false" afterPath="$PROJECT_DIR$/pycad/ComponentsMainWindow.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pycad/Drawable.py" beforeDir="false" afterPath="$PROJECT_DIR$/pycad/Drawable.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pycad/DrawableLineImpl.py" beforeDir="false" afterPath="$PROJECT_DIR$/pycad/DrawableLineImpl.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pycad/DrawableTextImpl.py" beforeDir="false" afterPath="$PROJECT_DIR$/pycad/DrawableTextImpl.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pycad/Plugin.py" beforeDir="false" afterPath="$PROJECT_DIR$/pycad/Plugin.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -57,7 +60,7 @@
     "git-widget-placeholder": "work",
     "go.import.settings.migrated": "true",
     "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "C:/Users/alferio/Development/test-qtpy/plugins",
+    "last_opened_file_path": "C:/Users/alferio/Development/py-prevent-sleep",
     "nodejs_package_manager_path": "npm",
     "project.structure.last.edited": "Project",
     "project.structure.proportion": "0.0",

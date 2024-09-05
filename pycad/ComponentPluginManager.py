@@ -6,16 +6,21 @@ from PySide6.QtCore import Signal
 import requests
 import os
 
+from plugins.MultipointTool import MultipointTool
+
 PLUGINS_DIR = 'plugins'
 VALIDATION_URL = 'https://raw.githubusercontent.com/alfu32/pycad/main/validatedplugins.json'
 
 
 class PluginManager(QDialog):
     closed = Signal(bool)
-    github_plugins=[]
+    github_plugins = []
 
-    def __init__(self, filename: str, parent:QWidget = None):
+    def __init__(self, filename: str, parent: QWidget = None):
         super(PluginManager, self).__init__(parent)
+        self.loaded_plugins = [
+            MultipointTool()
+        ]
         self.setWindowTitle(f"pycad24 - Plugin Manager - {filename}")
         self.setGeometry(100, 100, 800, 600)
 
@@ -87,7 +92,8 @@ class PluginManager(QDialog):
             if response.status_code == 200:
                 plugins = response.json()["items"][:10]
                 for plugin in plugins:
-                    self.github_plugins_list.addItem(f"{plugin['url'].replace('https://api.github.com/repos/','')} - {plugin['default_branch']} - {plugin['description']} - {plugin['license']['name']}")
+                    self.github_plugins_list.addItem(
+                        f"{plugin['url'].replace('https://api.github.com/repos/', '')} - {plugin['default_branch']} - {plugin['description']} - {plugin['license']['name']}")
 
     def load_local_plugins(self):
         # Load local plugins (for simplicity, assumed to be in the current directory)
@@ -118,7 +124,7 @@ class PluginManager(QDialog):
             self.plugin_name_label.setText(plugin_name)
             self.plugin_short_description_label.setText("")
             # Fetching README locally
-            readme_path = os.path.join("plugins",f"{plugin_name}.md")
+            readme_path = os.path.join("plugins", f"{plugin_name}.md")
             print(f"reading {readme_path}")
             if os.path.exists(readme_path):
                 with open(readme_path, "r") as file:

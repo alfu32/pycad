@@ -1,13 +1,16 @@
 import csv
 import os
+from time import sleep
 
 import ezdxf
 from PySide6.QtCore import QPoint
-from PySide6.QtGui import QFontDatabase, Qt, QColor
+from PySide6.QtGui import QFontDatabase, Qt, QColor, QPainter
 from PySide6.QtWidgets import QMainWindow, QSpinBox, QPushButton, QVBoxLayout, QSizePolicy, QHBoxLayout, QCheckBox, \
     QLabel, QSpacerItem, QWidget
 from ezdxf.sections.table import LayerTable
 
+from plugins import MultipointTool
+from pycad import DrawableLineImpl, DrawableDimensionImpl, DrawableTextImpl
 from pycad.ComponentGitVersioningPanel import GitVersioningPanel
 from pycad.ComponentLayers import LayerManager, LayerModel
 from pycad.ComponentPluginManager import PluginManager
@@ -15,6 +18,7 @@ from pycad.ComponentsDrawingManager import DrawingManager, TextSignalData
 from pycad.DrawableDimensionImpl import Dimension
 from pycad.DrawableLineImpl import Line
 from pycad.DrawableTextImpl import Text
+from pycad.FailsafeOperations import OperationsQueue
 from pycad.constants import dxf_app_id, linetypes, lwindex, lwrindex
 from pycad.util_drawable import qcolor_to_dxf_color, get_true_color
 
@@ -36,6 +40,9 @@ class MainWindow(QMainWindow):
 
     def __init__(self, file: str, temp: str):
         super().__init__()
+        # self.plugins = [
+        #     MultipointTool,
+        # ]
         self.setStyleSheet(self.light_theme)
         self.font_family = "Arial"
         self.dxf_file = file
@@ -51,6 +58,8 @@ class MainWindow(QMainWindow):
         self.drawing_manager.setStyleSheet(self.dark_theme)
         self.drawing_manager.changed.connect(self.on_model_changed)
         self.drawing_manager.keyboard_input_changed.connect(self.on_keyboard_input_changed)
+        self.drawing_manager.point_clicked.connect(self.on_model_clicked)
+        self.drawing_manager.paint_event.connect(self.on_drawing_manager_paint_event)
 
         self.layer_manager = LayerManager(self.drawing_manager, filename=file)
         self.layer_manager.setMaximumWidth(720)
@@ -77,6 +86,17 @@ class MainWindow(QMainWindow):
         self.init_ui()
         self.load_dxf(file)
         self.setWindowTitle(f"PyCAD 24 - {self.dxf_file}")
+        # Initialize OperationsQueue
+        #self.operation_queue = OperationsQueue()
+
+        # Use OperationsQueue to execute a lambda function
+        for plugin in self.plugin_manager_panel.loaded_plugins:
+            print(f"plugin {plugin.name} subscribe drawable_ready", flush=True)
+            #self.operation_queue.exec(lambda: plugin.drawable_ready.connect(self.on_plugin_finished))
+            plugin.drawable_ready.connect(self.on_plugin_finished)
+
+    def on_plugin_finished(self, drawable):
+        self.statusBar().showMessage(f"finished {drawable}")
 
     def on_grid_snap_changed(self, checked):
         self.drawing_manager.flSnapGrid = bool(checked)
@@ -108,10 +128,25 @@ class MainWindow(QMainWindow):
         # print(f"{model}", flush=True)
         self.save_dxf(self.temp_file)
 
+    def on_model_clicked(self, point):
+
+        for plugin_instance in self.plugin_manager_panel.loaded_plugins:
+            if plugin_instance.is_active:
+                plugin_instance.push_model_point(point)
+
     def on_keyboard_input_changed(self, data: TextSignalData):
+        for plugin_instance in self.plugin_manager_panel.loaded_plugins:
+            if plugin_instance.is_active:
+                plugin_instance.push_user_text(data)
         # print("model changed", flush=True)
         # print(f"{model}", flush=True)
         self.statusBar().showMessage(f"Input: {data.text} {data.number}")
+
+    def on_drawing_manager_paint_event(self, painter: QPainter, moving_point: QPoint):
+        # print("drawing plugins figures", flush=True)
+        for plugin_instance in self.plugin_manager_panel.loaded_plugins:
+            if plugin_instance.is_active:
+                plugin_instance.draw(painter, moving_point)
 
     def on_layer_manager_closed(self, value):
         self.layout_man_button.setChecked(False)
@@ -206,6 +241,10 @@ class MainWindow(QMainWindow):
         self.text_mode_button.setCheckable(True)
         self.text_mode_button.clicked.connect(self.set_text_mode)
         control_layout.addWidget(self.text_mode_button)
+
+        for plugin_instance in self.plugin_manager_panel.loaded_plugins:
+            widget = plugin_instance.get_ui_fragment()
+            control_layout.addWidget(widget)
 
         main_layout.addLayout(control_layout)
         main_layout.addWidget(self.drawing_manager)

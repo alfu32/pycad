@@ -11,25 +11,18 @@ from pycad.Drawable import Drawable, HotspotClasses, HotspotHandler
 from pycad.DrawableDimensionImpl import Dimension
 from pycad.DrawableLineImpl import Line
 from pycad.DrawableTextImpl import Text
+from pycad.TextSignalData import TextSignalData
 from pycad.constants import linetypes
 from pycad.util_drawable import draw_rect, draw_hotspot_class, draw_cursor, draw_point
 from pycad.util_geometry import find_nearest_point, snap_to_angle
 from pycad.util_math import distance, floor_to_nearest, ceil_to_nearest
 
 
-class TextSignalData:
-    def __init__(self, i:str, t:str):
-        self.text = t
-        try:
-            cleaned_string = re.sub(r'[^0-9.]', '', i)
-            self.number = int(cleaned_string)
-        except ValueError as x:
-            self.number = 0
-
-
 class DrawingManager(QWidget):
     changed = Signal(object)  # Define a custom signal with a generic object type
     keyboard_input_changed = Signal(object)  # Define a custom signal with a generic object type
+    point_clicked = Signal(QPoint)  # Define a custom signal with a generic object type
+    paint_event = Signal(QPainter, QPoint)  # Define a custom signal with a generic object type
 
     def __init__(self, filename: str):
         super().__init__()
@@ -144,6 +137,7 @@ class DrawingManager(QWidget):
         end_point = self.model_point_snapped
         if event.modifiers() & Qt.ControlModifier:
             end_point = snap_to_angle(self.current_drawable.segment.a, end_point)
+        self.point_clicked.emit(end_point)
         if event.button() == Qt.LeftButton:
             layer = self.current_layer()
             if self.current_drawable is None:
@@ -163,7 +157,7 @@ class DrawingManager(QWidget):
             self.number_input = ""
             self.text_input = ""
             self.changed.emit(self.layers)
-            self.keyboard_input_changed.emit(TextSignalData(self.number_input, self.text_input))
+            self.keyboard_input_changed.emit(TextSignalData(self.number_input, self.text_input, 0))
         self.update()
 
     def keyPressEvent(self, event):
@@ -203,7 +197,7 @@ class DrawingManager(QWidget):
         if self.number_input != number_input or text_input != self.text_input:
             self.number_input = number_input
             self.text_input = text_input
-            self.keyboard_input_changed.emit(TextSignalData(self.number_input, self.text_input))
+            self.keyboard_input_changed.emit(TextSignalData(self.number_input, self.text_input, key))
 
         if self.current_drawable is not None:
             if isinstance(self.current_drawable, Text):
@@ -229,7 +223,7 @@ class DrawingManager(QWidget):
                 self.number_input = ""
                 self.text_input = ""
                 self.changed.emit(self.layers)
-                self.keyboard_input_changed.emit(TextSignalData(self.number_input, self.text_input))
+                self.keyboard_input_changed.emit(TextSignalData(self.number_input, self.text_input,0))
 
     def paintEvent(self, event):
         painter: QPainter = QPainter(self)
@@ -277,6 +271,7 @@ class DrawingManager(QWidget):
             pen.setDashPattern(linetypes[layer.linetype])
             painter.setPen(pen)
             self.current_drawable.draw(painter)
+        self.paint_event.emit(painter, self.model_point_snapped)
 
         # if self.flSnapGrid:
         #     self.draw_local_grid(painter, self.model_point_snapped, 0x111111)
