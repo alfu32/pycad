@@ -11,7 +11,7 @@ from pycad.Drawable import Drawable, HotspotClasses, HotspotHandler
 from pycad.DrawableDimensionImpl import Dimension
 from pycad.DrawableLineImpl import Line
 from pycad.DrawableTextImpl import Text
-from pycad.TextSignalData import TextSignalData
+from pycad.Plugin import BasePlugin
 from pycad.constants import linetypes
 from pycad.util_drawable import draw_rect, draw_hotspot_class, draw_cursor, draw_point
 from pycad.util_geometry import find_nearest_point, snap_to_angle
@@ -23,6 +23,7 @@ class DrawingManager(QWidget):
     keyboard_input_changed = Signal(object)  # Define a custom signal with a generic object type
     point_clicked = Signal(QPoint)  # Define a custom signal with a generic object type
     paint_event = Signal(QPainter, QPoint)  # Define a custom signal with a generic object type
+
 
     def __init__(self, filename: str):
         super().__init__()
@@ -46,6 +47,11 @@ class DrawingManager(QWidget):
         self.font_family = "Arial"  # Default mode
         self.number_input = ""
         self.text_input = ""
+        self.current_plugin: BasePlugin = None
+
+    def set_plugin(self,plugin:BasePlugin):
+        self.current_plugin.reset()
+        self.current_plugin = plugin
 
     def set_mode(self, mode):
         self.mode = mode
