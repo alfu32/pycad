@@ -14,11 +14,12 @@ from pycad import DrawableLineImpl, DrawableDimensionImpl, DrawableTextImpl
 from pycad.ComponentGitVersioningPanel import GitVersioningPanel
 from pycad.ComponentLayers import LayerManager, LayerModel
 from pycad.ComponentPluginManager import PluginManager
-from pycad.ComponentsDrawingManager import DrawingManager, TextSignalData
+from pycad.ComponentsDrawingManager import DrawingManager
 from pycad.DrawableDimensionImpl import Dimension
 from pycad.DrawableLineImpl import Line
 from pycad.DrawableTextImpl import Text
 from pycad.FailsafeOperations import OperationsQueue
+from pycad.TextSignalData import TextSignalData
 from pycad.constants import dxf_app_id, linetypes, lwindex, lwrindex
 from pycad.util_drawable import qcolor_to_dxf_color, get_true_color
 
@@ -40,9 +41,9 @@ class MainWindow(QMainWindow):
 
     def __init__(self, file: str, temp: str):
         super().__init__()
-        # self.plugins = [
+        self.plugins = [
         #     MultipointTool,
-        # ]
+        ]
         self.setStyleSheet(self.light_theme)
         self.font_family = "Arial"
         self.dxf_file = file

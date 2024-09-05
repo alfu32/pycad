@@ -6,12 +6,13 @@ from PySide6.QtCore import QPoint, Qt, Signal, QRect, QPointF
 from PySide6.QtGui import QMouseEvent, QPainter, QFont, QTransform, QPen
 from PySide6.QtWidgets import QWidget, QInputDialog
 
+from pycad import Plugin
 from pycad.ComponentLayers import LayerModel
 from pycad.Drawable import Drawable, HotspotClasses, HotspotHandler
 from pycad.DrawableDimensionImpl import Dimension
 from pycad.DrawableLineImpl import Line
 from pycad.DrawableTextImpl import Text
-from pycad.Plugin import BasePlugin
+# from pycad.Plugin import BasePlugin
 from pycad.constants import linetypes
 from pycad.util_drawable import draw_rect, draw_hotspot_class, draw_cursor, draw_point
 from pycad.util_geometry import find_nearest_point, snap_to_angle
@@ -47,9 +48,9 @@ class DrawingManager(QWidget):
         self.font_family = "Arial"  # Default mode
         self.number_input = ""
         self.text_input = ""
-        self.current_plugin: BasePlugin = None
+        self.current_plugin: Plugin = None
 
-    def set_plugin(self,plugin:BasePlugin):
+    def set_plugin(self,plugin:Plugin):
         self.current_plugin.reset()
         self.current_plugin = plugin
 
