@@ -1,7 +1,7 @@
 
 from PySide6.QtCore import QMetaType
 
-from pycad.Tool import MultipointTool
+from pycad.Tool import PolylineTool
 
 
 # Register all custom tool types globally

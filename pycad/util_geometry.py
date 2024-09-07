@@ -192,3 +192,6 @@ class HasPoints(Protocol):
     points: List[QPoint] = []
     moving_point: QPoint = None
     max_points: int = 2
+
+
+

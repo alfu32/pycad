@@ -7,25 +7,9 @@ from PySide6.QtCore import QPoint, QRect
 from PySide6.QtGui import QPainter
 
 from pycad.Drawable import Drawable, HotspotClasses, HotspotHandler
-from pycad.util_geometry import _points_equal, Segment, HasSegment
+from pycad.util_geometry import line_intersects_rect, line_contains_point, _points_equal, Segment, HasSegment
 from ezdxf.document import Drawing as DXFDrawing
 from ezdxf.document import Modelspace as DXFModelspace
-
-def split_line_by_points(line: HasSegment, points):
-    # return [line]
-    segments = []
-    start = line.segment.a
-    for point in points:
-        l = Line()
-        l.push(start)
-        l.push(point)
-        segments.append(line)
-        start = point
-    l = Line()
-    l.push(start)
-    l.push(line.segment.b)
-    segments.append(line)
-    return segments
 
 class Line(Drawable, ABC):
 
@@ -36,6 +20,10 @@ class Line(Drawable, ABC):
         self.points: List[QPoint] = []
         self.moving_point: QPoint = None
         self.max_points: int = 2
+
+    @override
+    def is_done(self):
+        return self._points >= 2
 
     def isin(self, rect: QRect) -> bool:
         return self.segment.is_in(rect)

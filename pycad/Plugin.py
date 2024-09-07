@@ -10,6 +10,7 @@ from pycad.Drawable import Drawable
 from pycad.TextSignalData import TextSignalData
 
 
+
 class BaseTool(QObject):
     github_url: str = ""
     _instance = None
@@ -27,11 +28,13 @@ class BaseTool(QObject):
 
     def __init__(self):
         super().__init__()
-        self.identifier = "plugin_base"
+        self.identifier = "core_plugin__base"
         self.name = "Base Plugin"
         self.button = QPushButton(f"{self.name}")
-        self.button.clicked.connect(self.start)
         self.input_buffer = []
+        self.button.clicked.connect(self.start)
+        self.button.setCheckable(True)
+        self.is_active = False
         print(f"{self.identifier} initialized", flush=True)
 
     def get_ui_fragment(self):
@@ -46,7 +49,7 @@ class BaseTool(QObject):
                 self.started.emit(self)
                 print(f"emitted {self.identifier}::started", flush=True)
             except Exception as x:
-                print(f" error emitting {self.identifier}::started signal ", flush=True)
+                print(f"error emitting {self.identifier}::started signal ", flush=True)
                 print(x)
             self.button.setChecked(True)
             self.is_active = True
@@ -79,26 +82,7 @@ class BaseTool(QObject):
                 print(f"{self.identifier}::push_user_text {text.text}", flush=True)
 
     def draw(self, painter: QPainter, moving_point: QPoint):
-        r = self.input_buffer
-        l = len(r)
-        # print(f"drawing Polyline Plugin figure {l} points : {r}", flush=True)
-        if l > 1:
-            a = r[0]
-            b = r[1]
-            painter.drawLine(a.x(), a.y(), b.x(), b.y())
-            for i, p in enumerate(self.input_buffer):
-                if i == 0:
-                    continue
-                else:
-                    a = r[i]
-                    b = r[i + 1] if (i + 1) < l else moving_point
-                    painter.drawLine(a.x(), a.y(), b.x(), b.y())
-        elif l > 0:
-            a = r[0]
-            b = moving_point
-            painter.drawLine(a.x(), a.y(), b.x(), b.y())
-        else:
-            pass
+        draw_polyline(self,painter,moving_point)
 
         # raise NotImplementedError(f"{self.identifier} must implement draw method")
 
@@ -117,4 +101,28 @@ class BaseTool(QObject):
         return self.input_buffer
 
     def destroy(self):
+        pass
+
+
+
+def draw_polyline(self:BaseTool, painter: QPainter, moving_point: QPoint):
+    r = self.input_buffer
+    l = len(r)
+    # print(f"drawing Polyline Plugin figure {l} points : {r}", flush=True)
+    if l > 1:
+        a = r[0]
+        b = r[1]
+        painter.drawLine(a.x(), a.y(), b.x(), b.y())
+        for i, p in enumerate(self.input_buffer):
+            if i == 0:
+                continue
+            else:
+                a = r[i]
+                b = r[i + 1] if (i + 1) < l else moving_point
+                painter.drawLine(a.x(), a.y(), b.x(), b.y())
+    elif l > 0:
+        a = r[0]
+        b = moving_point
+        painter.drawLine(a.x(), a.y(), b.x(), b.y())
+    else:
         pass

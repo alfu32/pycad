@@ -25,10 +25,6 @@ class Text(Drawable, ABC):
         self.moving_point: QPoint = None
         self.max_points: int = 2
 
-    @override
-    def is_done(self):
-        return self._points >= 2
-
     def isin(self, rect: QRect) -> bool:
         return self.segment.is_in(rect)
 
@@ -62,11 +58,6 @@ class Text(Drawable, ABC):
         # du = QPoint(tw*math.cos(r),tw*math.sin(r),)
         # self.segment.b = QPoint(start_point.x() + du.x(), start_point.y() + du.y())
         pass
-
-    # TODO remove 1000
-    def set_next_point(self, point: QPoint):
-        self.set_send_point(point)
-        self.finished.emit(True)
 
     def contains_point(self, point):
         return self.segment.contains_point(point)

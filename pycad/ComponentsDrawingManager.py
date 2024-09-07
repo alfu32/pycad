@@ -273,11 +273,11 @@ class DrawingManager(QWidget):
             for drawable in layer.drawables:
                 drawable.draw(painter)
         # #### if self.current_drawable:
-        # ####     layer = self.current_layer()
-        # ####     pen = QPen(self.current_layer().color, self.current_layer().lineweight / self.zoom_factor, Qt.SolidLine)
-        # ####
-        # ####     pen.setDashPattern(linetypes[layer.linetype])
-        # ####     painter.setPen(pen)
+        layer = self.current_layer()
+        pen = QPen(self.current_layer().color, self.current_layer().lineweight / self.zoom_factor, Qt.SolidLine)
+
+        pen.setDashPattern(linetypes[layer.linetype])
+        painter.setPen(pen)
         # ####     self.current_drawable.draw(painter)
         self.paint_event.emit(painter, self.model_point_snapped)
 

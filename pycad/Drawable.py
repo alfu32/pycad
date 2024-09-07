@@ -34,10 +34,6 @@ class Drawable(ABC):
         self.moving_point: QPoint = None
         self.max_points: int = 2
 
-    @abstractmethod
-    def is_done(self):
-        pass
-
     def push(self, point: QPoint):
         if self._points == 0:
             self.segment.a = point
@@ -58,14 +54,6 @@ class Drawable(ABC):
 
     def build_is_finished(self) -> bool:
         return len(self.points) == self.max_points
-
-    # TODO remove 1000
-    def set_next_point(self, point: QPoint):
-        self.points.append(point)
-        if self.build_is_finished():
-            self.finished.emit(self)
-        else:
-            self.changed.emit(self)
 
     def set_moving_point(self, point: QPoint):
         self.moving_point = point

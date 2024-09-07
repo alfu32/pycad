@@ -25,10 +25,6 @@ class Dimension(Drawable, ABC):
         self.moving_point: QPoint = None
         self.max_points: int = 2
 
-    @override
-    def is_done(self):
-        return self._points >= 2
-
     def isin(self, rect: QRect) -> bool:
         return self.segment.is_in(rect)
 

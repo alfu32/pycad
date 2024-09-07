@@ -6,7 +6,8 @@ from PySide6.QtCore import Signal
 import requests
 import os
 
-from pycad.Tool import MultipointTool
+from pycad.Plugin import BaseTool
+from pycad.Tool import PolylineTool
 
 PLUGINS_DIR = 'plugins'
 VALIDATION_URL = 'https://raw.githubusercontent.com/alfu32/pycad/main/validatedplugins.json'
@@ -19,7 +20,8 @@ class PluginManager(QDialog):
     def __init__(self, filename: str, parent: QWidget = None):
         super(PluginManager, self).__init__(parent)
         self.loaded_plugins = [
-            MultipointTool()
+            BaseTool(),
+            PolylineTool(),
         ]
         self.setWindowTitle(f"pycad24 - Plugin Manager - {filename}")
         self.setGeometry(100, 100, 800, 600)
