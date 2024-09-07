@@ -1,37 +1,27 @@
-from abc import ABC, abstractmethod
-from typing import List
+from PySide6.QtCore import Signal, QPoint, QObject
+from PySide6.QtGui import QPainter, Qt
+from PySide6.QtWidgets import QPushButton
 
-from PySide6.QtCore import QPoint, Signal, Qt, QObject
-from PySide6.QtGui import QPainter
-from PySide6.QtWidgets import QWidget, QPushButton
-
-from pycad.ComponentLayers import LayerModel
 from pycad.Drawable import Drawable
+from pycad.Plugin import BaseTool
 from pycad.TextSignalData import TextSignalData
 
 
-class BaseTool(QObject):
-    github_url: str = ""
-    _instance = None
-
+class MultipointTool(BaseTool):
     finished = Signal(QObject)
     point_received = Signal(QPoint)
     text_received = Signal(str)
     started = Signal(QObject)
 
-    @staticmethod
-    def get_instance() -> 'BaseTool':
-        if BaseTool._instance is None:
-            BaseTool._instance = BaseTool()
-        return BaseTool._instance
-
     def __init__(self):
         super().__init__()
-        self.identifier = "plugin_base"
-        self.name = "Base Plugin"
+        self.identifier = "core_plugin_polyline"
+        self.name = "Polyline"
+        self.input_buffer = []
         self.button = QPushButton(f"{self.name}")
         self.button.clicked.connect(self.start)
-        self.input_buffer = []
+        self.button.setCheckable(True)
+        self.is_active = False
         print(f"{self.identifier} initialized", flush=True)
 
     def get_ui_fragment(self):

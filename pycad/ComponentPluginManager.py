@@ -6,7 +6,7 @@ from PySide6.QtCore import Signal
 import requests
 import os
 
-from plugins.MultipointTool import MultipointTool
+from pycad.Tool import MultipointTool
 
 PLUGINS_DIR = 'plugins'
 VALIDATION_URL = 'https://raw.githubusercontent.com/alfu32/pycad/main/validatedplugins.json'

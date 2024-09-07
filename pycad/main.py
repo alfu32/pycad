@@ -4,11 +4,13 @@ from PySide6.QtWidgets import (
     QApplication
 )
 
+from pycad import register_tools
 from pycad.ComponentGitVersioningPanel import GitVersioningPanel
 from pycad.ComponentsMainWindow import MainWindow
 
 
 if __name__ == '__main__':
+    register_tools.register_all_tools()
     app = QApplication(sys.argv)
     timestamp = time.strftime("%Y%m%d-%H%M%S")
     default_file = f"drawing_{timestamp}.dxf"

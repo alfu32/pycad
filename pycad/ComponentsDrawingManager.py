@@ -12,6 +12,7 @@ from pycad.Drawable import Drawable, HotspotClasses, HotspotHandler
 from pycad.DrawableDimensionImpl import Dimension
 from pycad.DrawableLineImpl import Line
 from pycad.DrawableTextImpl import Text
+from pycad.TextSignalData import TextSignalData
 # from pycad.Plugin import BasePlugin
 from pycad.constants import linetypes
 from pycad.util_drawable import draw_rect, draw_hotspot_class, draw_cursor, draw_point
@@ -33,7 +34,7 @@ class DrawingManager(QWidget):
         self.setCursor(Qt.BlankCursor)
         self.layers = [LayerModel(name="0")]
         self.current_layer_index = 0
-        self.current_drawable: Drawable = None
+        # #### self.current_drawable: Drawable = None
         self.zoom_factor = 1.0
         self.offset = QPoint(0, 0)
         self.flSnapGrid = True
@@ -112,59 +113,59 @@ class DrawingManager(QWidget):
         self.model_point_snapped = self.apply_snaps(self.model_point_raw)
         self.screen_point_snapped = self.map_to_view(self.model_point_snapped)
 
-    def create_drawable(self) -> Drawable:
-        if self.mode == 'line':
-            return Line()
-        elif self.mode == 'text':
-            t = Text(25, "I__________I")
-            return t
-        elif self.mode == 'dimension':
-            return Dimension()
+    # #### def create_drawable(self) -> Drawable:
+    # ####     if self.mode == 'line':
+    # ####         return Line()
+    # ####     elif self.mode == 'text':
+    # ####         t = Text(25, "I__________I")
+    # ####         return t
+    # ####     elif self.mode == 'dimension':
+    # ####         return Dimension()
 
     def mousePressEvent(self, event: QMouseEvent):
         self.update_mouse_positions(event)
 
     def mouseMoveEvent(self, event):
         self.update_mouse_positions(event)
-        if self.current_drawable is not None:
-            end_point = self.model_point_snapped
-            if event.modifiers() & Qt.ControlModifier:
-                end_point = snap_to_angle(self.current_drawable.segment.a, end_point)
-            self.current_drawable.segment.b = end_point
-            self.current_drawable.set_moving_point(end_point)
-            # Update line color and width to match the current layer
-            # TODO move to a layerChanged event listener
-            layer = self.layers[self.current_layer_index]
-            self.current_drawable.color = layer.color
-            self.current_drawable.width = layer.lineweight
+        # #### if self.current_drawable is not None:
+        # ####     end_point = self.model_point_snapped
+        # ####     if event.modifiers() & Qt.ControlModifier:
+        # ####         end_point = snap_to_angle(self.current_drawable.segment.a, end_point)
+        # ####     self.current_drawable.segment.b = end_point
+        # ####     self.current_drawable.set_moving_point(end_point)
+        # ####     # Update line color and width to match the current layer
+        # ####     # TODO move to a layerChanged event listener
+        # ####     layer = self.layers[self.current_layer_index]
+        # ####     self.current_drawable.color = layer.color
+        # ####     self.current_drawable.width = layer.lineweight
         self.update()
 
     def mouseReleaseEvent(self, event):
         self.update_mouse_positions(event)
         end_point = self.model_point_snapped
-        if event.modifiers() & Qt.ControlModifier:
-            end_point = snap_to_angle(self.current_drawable.segment.a, end_point)
-        self.point_clicked.emit(end_point)
+        # #### TODO find a start point for angle snap #### if event.modifiers() & Qt.ControlModifier:
+        # #### TODO find a start point for angle snap ####     end_point = snap_to_angle(self.current_drawable.segment.a, end_point)
         if event.button() == Qt.LeftButton:
-            layer = self.current_layer()
-            if self.current_drawable is None:
-                self.current_drawable = self.create_drawable()
-                self.current_drawable.set_moving_point(end_point)
-            self.current_drawable.push(end_point)
+            self.point_clicked.emit(end_point)
+            # #### layer = self.current_layer()
+            # #### if self.current_drawable is None:
+            # ####     self.current_drawable = self.create_drawable()
+            # ####     self.current_drawable.set_moving_point(end_point)
+            # #### self.current_drawable.push(end_point)
         elif event.button() == Qt.RightButton:
             layer = self.current_layer()
             for line in layer.drawables:
                 if line.contains_point(self.model_point_raw):
                     layer.drawables.remove(line)
                     self.update()
-        if self.current_drawable is not None and self.current_drawable.is_done():
-            # TODO duplicated block FINALIZE_DRAWABLE_CONSTRUCTION
-            self.layers[self.current_layer_index].add_drawable(self.current_drawable)
-            self.current_drawable = None
-            self.number_input = ""
-            self.text_input = ""
-            self.changed.emit(self.layers)
-            self.keyboard_input_changed.emit(TextSignalData(self.number_input, self.text_input, 0))
+        # #### if self.current_drawable is not None and self.current_drawable.is_done():
+        # ####     # TODO duplicated block FINALIZE_DRAWABLE_CONSTRUCTION
+        # ####     self.layers[self.current_layer_index].add_drawable(self.current_drawable)
+        # ####     self.current_drawable = None
+        # ####     self.number_input = ""
+        # ####     self.text_input = ""
+        # ####     self.changed.emit(self.layers)
+        # ####     self.keyboard_input_changed.emit(TextSignalData(self.number_input, self.text_input, 0))
         self.update()
 
     def keyPressEvent(self, event):
@@ -180,7 +181,7 @@ class DrawingManager(QWidget):
         number_input = self.number_input
         text_input = self.text_input
         if key == Qt.Key_Escape:
-            self.current_drawable = None
+            # #### self.current_drawable = None
             number_input = ""
         elif key == Qt.Key_Backspace:
             number_input = number_input[:-1]
@@ -206,31 +207,31 @@ class DrawingManager(QWidget):
             self.text_input = text_input
             self.keyboard_input_changed.emit(TextSignalData(self.number_input, self.text_input, key))
 
-        if self.current_drawable is not None:
-            if isinstance(self.current_drawable, Text):
-                self.current_drawable.text = self.text_input
-                self.update()
-                return
+        # ##### if self.current_drawable is not None:
+        # #####     if isinstance(self.current_drawable, Text):
+        # #####         self.current_drawable.text = self.text_input
+        # #####         self.update()
+        # #####         return
 
-        if key in (Qt.Key_Return, Qt.Key_Enter):
-            if self.current_drawable is not None:
-                a = self.current_drawable.segment.a
-                new_length = TextSignalData(self.number_input, self.text_input).number
-                end_point = self.model_point_snapped
-                uw = QPointF(end_point.x() - a.x(),
-                             end_point.y() - a.y())
-                length = math.sqrt(uw.x() ** 2 + uw.y() ** 2)
-                end_point = QPoint(a.x() + int(uw.x() * new_length / length),
-                                   a.y() + int(uw.y() * new_length / length))
-                self.current_drawable.segment.b = end_point
-                self.current_drawable.push(end_point)
-                # TODO duplicated block FINALIZE_DRAWABLE_CONSTRUCTION
-                self.layers[self.current_layer_index].add_drawable(self.current_drawable)
-                self.current_drawable = None
-                self.number_input = ""
-                self.text_input = ""
-                self.changed.emit(self.layers)
-                self.keyboard_input_changed.emit(TextSignalData(self.number_input, self.text_input,0))
+        # #### if key in (Qt.Key_Return, Qt.Key_Enter):
+        # ####     if self.current_drawable is not None:
+        # ####         a = self.current_drawable.segment.a
+        # ####         new_length = TextSignalData(self.number_input, self.text_input).number
+        # ####         end_point = self.model_point_snapped
+        # ####         uw = QPointF(end_point.x() - a.x(),
+        # ####                      end_point.y() - a.y())
+        # ####         length = math.sqrt(uw.x() ** 2 + uw.y() ** 2)
+        # ####         end_point = QPoint(a.x() + int(uw.x() * new_length / length),
+        # ####                            a.y() + int(uw.y() * new_length / length))
+        # ####         self.current_drawable.segment.b = end_point
+        # ####         self.current_drawable.push(end_point)
+        # ####         # TODO duplicated block FINALIZE_DRAWABLE_CONSTRUCTION
+        # ####         self.layers[self.current_layer_index].add_drawable(self.current_drawable)
+        # ####         self.current_drawable = None
+        # ####         self.number_input = ""
+        # ####         self.text_input = ""
+        # ####         self.changed.emit(self.layers)
+        # ####         self.keyboard_input_changed.emit(TextSignalData(self.number_input, self.text_input,0))
 
     def paintEvent(self, event):
         painter: QPainter = QPainter(self)
@@ -253,10 +254,10 @@ class DrawingManager(QWidget):
             if isinstance(p, QPoint):
                 draw_hotspot_class(painter, cls, self.map_to_view(p))
 
-        if self.current_drawable:
-            draw_rect(painter, self.map_to_view(self.current_drawable.segment.a))
-            if isinstance(self.current_drawable.segment.b, QPoint):
-                draw_rect(painter, self.map_to_view(self.current_drawable.segment.b))
+        # #### if self.current_drawable:
+        # ####     draw_rect(painter, self.map_to_view(self.current_drawable.segment.a))
+        # ####     if isinstance(self.current_drawable.segment.b, QPoint):
+        # ####         draw_rect(painter, self.map_to_view(self.current_drawable.segment.b))
 
         transform = QTransform()
         transform.translate(self.offset.x(), self.offset.y())
@@ -271,13 +272,13 @@ class DrawingManager(QWidget):
             painter.setPen(pen)
             for drawable in layer.drawables:
                 drawable.draw(painter)
-        if self.current_drawable:
-            layer = self.current_layer()
-            pen = QPen(self.current_layer().color, self.current_layer().lineweight / self.zoom_factor, Qt.SolidLine)
-
-            pen.setDashPattern(linetypes[layer.linetype])
-            painter.setPen(pen)
-            self.current_drawable.draw(painter)
+        # #### if self.current_drawable:
+        # ####     layer = self.current_layer()
+        # ####     pen = QPen(self.current_layer().color, self.current_layer().lineweight / self.zoom_factor, Qt.SolidLine)
+        # ####
+        # ####     pen.setDashPattern(linetypes[layer.linetype])
+        # ####     painter.setPen(pen)
+        # ####     self.current_drawable.draw(painter)
         self.paint_event.emit(painter, self.model_point_snapped)
 
         # if self.flSnapGrid:

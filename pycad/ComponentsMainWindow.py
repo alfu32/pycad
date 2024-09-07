@@ -1,6 +1,5 @@
 import csv
 import os
-from time import sleep
 
 import ezdxf
 from PySide6.QtCore import QPoint
@@ -9,8 +8,6 @@ from PySide6.QtWidgets import QMainWindow, QSpinBox, QPushButton, QVBoxLayout, Q
     QLabel, QSpacerItem, QWidget
 from ezdxf.sections.table import LayerTable
 
-from plugins import MultipointTool
-from pycad import DrawableLineImpl, DrawableDimensionImpl, DrawableTextImpl
 from pycad.ComponentGitVersioningPanel import GitVersioningPanel
 from pycad.ComponentLayers import LayerManager, LayerModel
 from pycad.ComponentPluginManager import PluginManager
@@ -18,7 +15,7 @@ from pycad.ComponentsDrawingManager import DrawingManager
 from pycad.DrawableDimensionImpl import Dimension
 from pycad.DrawableLineImpl import Line
 from pycad.DrawableTextImpl import Text
-from pycad.FailsafeOperations import OperationsQueue
+from pycad.Plugin import BaseTool
 from pycad.TextSignalData import TextSignalData
 from pycad.constants import dxf_app_id, linetypes, lwindex, lwrindex
 from pycad.util_drawable import qcolor_to_dxf_color, get_true_color
@@ -41,9 +38,6 @@ class MainWindow(QMainWindow):
 
     def __init__(self, file: str, temp: str):
         super().__init__()
-        self.plugins = [
-        #     MultipointTool,
-        ]
         self.setStyleSheet(self.light_theme)
         self.font_family = "Arial"
         self.dxf_file = file
@@ -87,17 +81,21 @@ class MainWindow(QMainWindow):
         self.init_ui()
         self.load_dxf(file)
         self.setWindowTitle(f"PyCAD 24 - {self.dxf_file}")
-        # Initialize OperationsQueue
-        #self.operation_queue = OperationsQueue()
 
         # Use OperationsQueue to execute a lambda function
         for plugin in self.plugin_manager_panel.loaded_plugins:
-            print(f"plugin {plugin.name} subscribe drawable_ready", flush=True)
-            #self.operation_queue.exec(lambda: plugin.drawable_ready.connect(self.on_plugin_finished))
-            plugin.drawable_ready.connect(self.on_plugin_finished)
+            print(f"plugin {plugin.name} subscribe on_tool_started", flush=True)
+            plugin.started.connect(self.on_tool_started)
+            print(f"plugin {plugin.name} subscribe on_tool_finished", flush=True)
+            plugin.finished.connect(self.on_tool_finished)
 
-    def on_plugin_finished(self, drawable):
-        self.statusBar().showMessage(f"finished {drawable}")
+    def on_tool_started(self, tool:BaseTool):
+        print(f"main received on_tool_started from tool {tool.identifier}",flush=True)
+        self.statusBar().showMessage(f"started {tool.name}")
+
+    def on_tool_finished(self, tool:BaseTool):
+        print(f"main received on_tool_finished from tool {tool.identifier}",flush=True)
+        self.statusBar().showMessage(f"finished {tool.name}")
 
     def on_grid_snap_changed(self, checked):
         self.drawing_manager.flSnapGrid = bool(checked)
@@ -244,13 +242,6 @@ class MainWindow(QMainWindow):
         # self.text_mode_button.setCheckable(True)
         # self.text_mode_button.clicked.connect(self.set_text_mode)
         # control_layout.addWidget(self.text_mode_button)
-
-        for plugin in self.plugins:
-            control_layout.addWidget(plugin.ui)
-
-        for plugin_instance in self.plugin_manager_panel.loaded_plugins:
-            widget = plugin_instance.get_ui_fragment()
-            control_layout.addWidget(widget)
 
         for plugin_instance in self.plugin_manager_panel.loaded_plugins:
             widget = plugin_instance.get_ui_fragment()
