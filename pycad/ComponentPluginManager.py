@@ -5,7 +5,7 @@ import subprocess
 import zipfile
 from PySide6.QtWidgets import (QApplication, QDialog, QVBoxLayout, QHBoxLayout,
                                QTabWidget, QLineEdit, QListWidget, QTextEdit,
-                               QPushButton, QLabel, QWidget)
+                               QPushButton, QLabel, QWidget, QListWidgetItem)
 from PySide6.QtCore import Signal
 import requests
 import os
@@ -29,6 +29,7 @@ def kebab_to_pascal(kebab_str):
 
 
 def download_github_repo(plugin, base_folder):
+    print(f"downloading the plugin {plugin}", flush=True)
     # Parse the repository URL to create the appropriate folder structure
     target_folder = os.path.join(base_folder, plugin['python']['folder'])
     if os.path.exists(target_folder):
@@ -71,11 +72,8 @@ class PluginManager(QDialog):
     def __init__(self, filename: str, parent: QWidget = None):
         super(PluginManager, self).__init__(parent)
         self.current_plugin = None
-        self.plugins_github = []
+        self.plugins_github: dict = {}
         self.plugins_local: dict = {}
-        if os.path.exists('plugins/plugins.json'):
-            with open('plugins/plugins.json', 'r') as json_file:
-                self.plugins_local = json.load(json_file)
 
         self.loaded_plugins = [
             BaseTool(),
@@ -96,22 +94,21 @@ class PluginManager(QDialog):
         self.search_box.setPlaceholderText("Search for GitHub plugins")
         self.search_box.textChanged.connect(self.search_github_plugins)
 
-        self.github_plugins_list = QListWidget()
-        self.github_plugins_list.currentRowChanged.connect(self.display_github_plugin_details)
+        self.plugins_github_list_view = QListWidget()
+        self.plugins_github_list_view.currentItemChanged.connect(self.on_select_github_plugin)
 
         github_layout.addWidget(self.search_box)
-        github_layout.addWidget(self.github_plugins_list)
+        github_layout.addWidget(self.plugins_github_list_view)
         github_tab.setLayout(github_layout)
 
         # Local Tab
         local_tab = QWidget()
         local_layout = QVBoxLayout()
 
-        self.local_plugins_list = QListWidget()
-        self.local_plugins_list.currentRowChanged.connect(self.display_local_plugin_details)
-        self.load_local_plugins()
+        self.plugins_local_list_view = QListWidget()
+        self.plugins_local_list_view.currentItemChanged.connect(self.on_select_local_plugin)
 
-        local_layout.addWidget(self.local_plugins_list)
+        local_layout.addWidget(self.plugins_local_list_view)
         local_tab.setLayout(local_layout)
 
         tab_widget.addTab(github_tab, "GitHub")
@@ -144,74 +141,96 @@ class PluginManager(QDialog):
         main_layout.addLayout(details_layout)
 
         self.setLayout(main_layout)
-        self.search_github_plugins("p")
+        self.load_local_plugins()
+        self.search_github_plugins("")
 
         self.tab_changed(0)
 
     def tab_changed(self, a):
         print(f"tab changed to {a}", flush=True)
         if a == 0:
-            if self.github_plugins_list.count() > 0:
-                self.github_plugins_list.setCurrentRow(0)
-                self.display_github_plugin_details(0)
+            if self.plugins_github_list_view.count() > 0:
+                if self.current_plugin is None:
+                    self.plugins_github_list_view.setCurrentRow(0)
+                    ci=self.plugins_github_list_view.currentItem()
+                else:
+                    pass
+                print(f"github list first item is {ci.text()}",flush=True)
+                self.on_select_github_plugin(ci,ci)
+            else:
+                print(f"plugins_github_list_view count is 0",flush=True)
         elif a == 1:
-            if self.local_plugins_list.count() > 0:
-                self.local_plugins_list.setCurrentRow(0)
-                self.display_local_plugin_details(0)
+            if self.plugins_local_list_view.count() > 0:
+                self.plugins_local_list_view.setCurrentRow(0)
+                ci=self.plugins_local_list_view.currentItem()
+                print(f"local list first item is {ci.text()}",flush=True)
+                self.on_select_local_plugin(ci,ci)
+            else:
+                print(f"plugins_local_list_view count is 0",flush=True)
         else:
             pass
 
-    def search_github_plugins(self, query):
-        self.github_plugins_list.clear()
-        if query:
-            response = requests.get(f"https://api.github.com/search/repositories?q=pycad24-plugin-{query}")
-            if response.status_code == 200:
-                plugins_json = response.json()["items"][:10]
+    def render_github_plugins_list(self):
+        self.plugins_github_list_view.clear()
+        for key,plugin in self.plugins_github.items():
+            self.plugins_github_list_view.addItem(plugin['python']['key'])
 
-                self.plugins_github = []
-                for plugin in plugins_json:
-                    _space, _author, _name = (
-                        plugin["clone_url"]
-                        .replace('https://', '')
-                        .replace('.git', '')
-                        .replace('github.com', 'github')
-                    ).split('/')
-                    pkg_space = kebab_to_pascal(_space)
-                    pkg_author = kebab_to_pascal(_author)
-                    pkg_name = kebab_to_pascal(_name)
-                    pkg_key = f'{pkg_space}/{pkg_author}/{pkg_name}'
-                    pkg_ord = self.plugins_github.count()
-                    if pkg_key in self.plugins_local:
-                        continue
+    def search_github_plugins(self, query=""):
+        response = requests.get(f"https://api.github.com/search/repositories?q=pycad24-plugin-{query}")
+        if response.status_code == 200:
+            plugins_json = response.json()["items"][:10]
 
-                    plugin['python'] = {
-                        'key': pkg_key,
-                        'pkg_space': _space,
-                        'pkg_author': _author,
-                        'pkg_name': _name,
-                        'folder': f'{pkg_space}/{pkg_author}/{pkg_name}',
-                        'package': f'{pkg_space}.{pkg_author}.{pkg_name}',
-                        'header': f'from {pkg_space}.{pkg_author}.{pkg_name}.plugin import init_plugin as {pkg_space}_{pkg_author}_{pkg_name}__init_plugin',
-                        'init': f'    {pkg_space}_{pkg_author}_{pkg_name}__init_plugin(app)',
-                        'is_loaded': pkg_key in self.plugins_local,
-                        'readme_path': os.path.join(f'plugins/{pkg_space}/{pkg_author}/{pkg_name}', f"README.md"),
-                        'short_description': f"{plugin['url'].replace('https://api.github.com/repos/', '')} - {plugin['default_branch']} - {plugin['description']} - {plugin['license']['name']}",
-                    }
-                    plugin['download_base_url'] = f"{plugin['html_url']}.git"
-                    plugin['package_path'] = kebab_to_pascal(plugin['html_url'].replace('http://github.com', 'github'))
-                    self.plugins_github.append(plugin)
-                    self.github_plugins_list.addItem(plugin['python']['short_description'])
+            self.plugins_github = {}
+            for plugin in plugins_json:
+                _space, _author, _name = (
+                    plugin["clone_url"]
+                    .replace('https://', '')
+                    .replace('.git', '')
+                    .replace('github.com', 'github')
+                ).split('/')
+                pkg_space = kebab_to_pascal(_space)
+                pkg_author = kebab_to_pascal(_author)
+                pkg_name = kebab_to_pascal(_name)
+                pkg_key = f'{pkg_space}/{pkg_author}/{pkg_name}'
+                if pkg_key in self.plugins_local:
+                    continue
 
-                with open('plugins/plugins-github.json', 'w+') as local:
-                    json.dump(self.plugins_github, local, indent=4)
+                plugin['python'] = {
+                    'key': pkg_key,
+                    'pkg_space': _space,
+                    'pkg_author': _author,
+                    'pkg_name': _name,
+                    'folder': f'{pkg_space}/{pkg_author}/{pkg_name}',
+                    'package': f'{pkg_space}.{pkg_author}.{pkg_name}',
+                    'header': f'from {pkg_space}.{pkg_author}.{pkg_name}.plugin import init_plugin as {pkg_space}_{pkg_author}_{pkg_name}__init_plugin',
+                    'init': f'    {pkg_space}_{pkg_author}_{pkg_name}__init_plugin(app)',
+                    'is_loaded': pkg_key in self.plugins_local,
+                    'readme_path': os.path.join(f'plugins/{pkg_space}/{pkg_author}/{pkg_name}', f"README.md"),
+                    'short_description': f"{plugin['url'].replace('https://api.github.com/repos/', '')} - {plugin['default_branch']} - {plugin['description']} - {plugin['license']['name']}",
+                }
+                plugin['download_base_url'] = f"{plugin['html_url']}.git"
+                plugin['package_path'] = kebab_to_pascal(plugin['html_url'].replace('http://github.com', 'github'))
+                self.plugins_github[pkg_key]=plugin
+
+            self.store_github_plugins()
+            self.render_github_plugins_list()
+            self.render_local_plugins_list_view()
+
+    def render_local_plugins_list_view(self):
+        # Load local plugins (for simplicity, assumed to be in the current directory)
+        self.plugins_local_list_view.clear()
+        for key, plugin in self.plugins_local.items():
+            self.plugins_local_list_view.addItem(plugin['python']['key'])
 
     def load_local_plugins(self):
         # Load local plugins (for simplicity, assumed to be in the current directory)
-        self.local_plugins_list.clear()
-        for key, plugin in self.plugins_local.items():
-            self.local_plugins_list.addItem(plugin['python']['short_description'])
+        if os.path.exists('plugins/plugins.json'):
+            with open('plugins/plugins.json', 'r') as json_file:
+                self.plugins_local = json.load(json_file)
 
     def compile_python_plugins_loader(self):
+
+        print(f"compiling plugin loader {self.current_plugin['name']}", flush=True)
         imports = []
         inits = [
             "# plugins init",
@@ -231,6 +250,7 @@ class PluginManager(QDialog):
                 for ini in inits:
                     file.write(f"{ini}\n")  # Add newline character after each line
                 file.write("    pass\n")  # Add newline character after each line
+        print(f".... done compiling", flush=True)
 
     def fetch_readme(self, user, repo, branch="main"):
         url = f"https://raw.githubusercontent.com/{user}/{repo}/{branch}/README.md"
@@ -243,9 +263,13 @@ class PluginManager(QDialog):
             print(f"Error: {response.status_code}")
             return None
 
-    def display_github_plugin_details(self, row_index):
+    def on_select_github_plugin(self, current:QListWidgetItem,prev:QListWidgetItem):
+        if current:
+            current_key=current.text()
+            self.select_github_plugin(current_key)
 
-        self.current_plugin = self.plugins_github[row_index]
+    def select_github_plugin(self, current_key:str):
+        self.current_plugin = self.plugins_github[current_key]
         print(f"selecting {self.current_plugin['name']}", flush=True)
         plugin_name = self.current_plugin['name']
         self.plugin_name_label.setText(plugin_name)
@@ -263,9 +287,13 @@ class PluginManager(QDialog):
         self.install_button.setEnabled(True)
         self.uninstall_button.setEnabled(False)
 
-    def display_local_plugin_details(self, row_index):
-        current_index = row_index
-        key, plugin = list(self.plugins_local.items())[row_index]
+    def on_select_local_plugin(self, current:QListWidgetItem,prev:QListWidgetItem):
+        if current:
+            current_key=current.text()
+            self.select_local_plugin(current_key)
+
+    def select_local_plugin(self, current_key:str):
+        plugin = self.plugins_local[current_key]
         plugin_name = plugin['name']
         self.plugin_name_label.setText(plugin_name)
         self.plugin_short_description_label.setText("")
@@ -281,44 +309,46 @@ class PluginManager(QDialog):
         self.install_button.setEnabled(False)
         self.uninstall_button.setEnabled(True)
 
+    def store_local_plugins(self):
+        print(f"dumping plugins.json", flush=True)
+        with open("plugins/plugins.json", "w") as json_file:
+            json.dump(self.plugins_local, json_file, indent=4)
+
+    def store_github_plugins(self):
+        print(f"dumping plugins-github.json", flush=True)
+        with open("plugins/plugins-github.json", "w") as json_file:
+            json.dump(self.plugins_github, json_file, indent=4)
+
     def install_plugin(self):
         if self.current_plugin is not None:
-            index = self.plugins_github.index(self.current_plugin)
-            print(f"current plugin is {index}th in the github plugins list")
-            print(f"downloading the plugin {self.current_plugin['name']}", flush=True)
+            index = self.current_plugin['python']['key']
+            print(f"installing the plugin {index}")
             download_github_repo(self.current_plugin, "plugins")
-            print(f".... done downloading the plugin {self.current_plugin['name']}", flush=True)
-            self.plugins_local[self.current_plugin['python']['key']] = self.current_plugin
-            print(f"dumping plugins.json {self.current_plugin['name']}", flush=True)
-            with open("plugins/plugins.json", "w") as json_file:
-                json.dump(self.plugins_local, json_file, indent=4)
-            print(f"compiling plugin loader {self.current_plugin['name']}", flush=True)
-            self.compile_python_plugins_loader()
-            print(f".... done", flush=True)
-            self.plugins_github.remove(self.current_plugin)
-            self.github_plugins_list.model().removeRow(index)
-            self.plugins_local[self.current_plugin['python']['key']] = (self.current_plugin)
-            self.local_plugins_list.addItem(self.current_plugin['python']['short_description'])
+            self.plugins_local[index] = self.current_plugin
+            del self.plugins_github[index]
 
+            self.store_local_plugins()
+            self.store_github_plugins()
+            self.compile_python_plugins_loader()
+            self.render_github_plugins_list()
+            self.render_local_plugins_list_view()
+            self.tab_changed(0)
         else:
             print(f"no current plugin", flush=True)
 
     def uninstall_plugin(self):
         if self.current_plugin is not None:
             print(f"uninstalling the plugin {self.current_plugin['name']}", flush=True)
-            index = list(self.plugins_local.keys()).index(self.current_plugin['python']['key'])
-            print(f"found {self.current_plugin['name']} at index {index}",flush=True)
+            index = self.current_plugin['python']['key']
             del self.plugins_local[self.current_plugin['python']['key']]
-            self.plugins_github.append(self.current_plugin)
-            self.local_plugins_list.model().removeRow(index)
-            self.github_plugins_list.addItem(self.current_plugin['python']['short_description'])
+            self.plugins_github[index]=self.current_plugin
 
-            print(f"dumping plugins.json {self.current_plugin['name']}", flush=True)
-            with open("plugins/plugins.json", "w") as json_file:
-                json.dump(self.plugins_local, json_file, indent=4)
-            print(f"compiling plugin loader {self.current_plugin['name']}", flush=True)
+            self.store_local_plugins()
+            self.store_github_plugins()
             self.compile_python_plugins_loader()
-            print(f".... done", flush=True)
+            self.render_github_plugins_list()
+            self.render_local_plugins_list_view()
+            self.tab_changed(1)
         else:
             print(f"no current plugin selected", flush=True)
 
